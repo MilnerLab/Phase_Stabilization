@@ -8,7 +8,7 @@ Write-Host "=== Creating/checking virtual environment '$venvPath' ==="
 
 if (-not (Test-Path $venvPath)) {
     Write-Host "Creating virtual environment..."
-    python -m venv $venvPath
+    py -3.9-32 -m venv $venvPath
 } else {
     Write-Host "Virtual environment already exists, skipping creation."
 }
