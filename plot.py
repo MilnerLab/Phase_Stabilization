@@ -4,6 +4,7 @@ import time
 
 import matplotlib.pyplot as plt
 
+#pip install "numpy==1.23.5" "matplotlib==3.7.5"
 #"C:\Pfad\zu\Python311-32\python.exe" -m venv .venv32   py -3.13-32 -m venv .venv
 #.\.venv32\Scripts\Activate.ps1
 # ---------------------------------------------------------
