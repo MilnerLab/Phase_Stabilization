@@ -75,26 +75,9 @@ All applications are started via Python’s module syntax from the repository ro
 
 
 ```powershell
-python -m LabviewToPython.app
+python -m plot
 ```
-```powershell
-python -m time_scan_app.main
-```
-```powershell
-python -m ionplotter.app
-```
-```powershell
-python -m stft_app.app
-```
-```powershell
-python -m lab_discord_bot.main
-```
-```powershell
-python -m Lab_apps.plot_bot.script
-```
-```powershell
-python -m Lab_apps.scan_averaging.script
-```
+
 ---
 
 ## 5. Notes
