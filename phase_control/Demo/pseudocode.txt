@@ -1,5 +1,56 @@
 
 Basic steps for the code:
-1.
+
+Initialize connection with spectrometer
+
+Set spectrometer to continuous mode, and timeout to 10S or something
+
+Update # averages and exposure time (set some upper limit)
+ 
+Home waveplate rotator and set local variable for its position to 0 degrees
+
+Collect spectrum 
+
+Cut spectrum down to range between two user variables (GUI or easy to modify in script before running) "lower wavelength" and "upper wavelength". Do this for ALL subsequent spectra.
+
+Plot spectrum then produce a popup asking user whether they want to continue, or quit the program.
+(A better version of this program would just run and let you modify the exposure time and # averages while looking at the spectrum)
 
 
+--- FIT SETUP LOOP: 
+
+Normalize spectrum, then attempt a fit based off of a series of initial parameters (GUI or easy to modify in script before running).
+
+- usCFG or cfCFG 
+- Carrier Wavelength (800nm etc.) and uncompressed pulse bandwidth (30nm, 9nm, etc) are needed for the envelope
+- For usCFG it makes sense to specify "wavelength of 0 frequency" and "Acceleration",
+- For cfCFG it makes sense to specify "average CFG frequency" "TOD-related acceleration" 
+- For both, there is also some offset that makes sense to have as a fit parameter, coming from the non-interfering baseline
+- For both the "phase" of the oscillations is fit
+
+A simple fit model that fits usCFG pretty well is 
+S = const +  (1-const)*(Gaussian(lambda - carrier,FWHM)*sin(phase + acceleration*(lambda - w_0)^2 )^2 )
+
+I would guess that for cfCFG we should use
+S = const +  (1-const)*(Gaussian(lambda - carrier,FWHM)*sin(phase + average*(lambda - carrier) + acceleration*(lambda - carrier)^3 )^2 )
+
+NOTE: It should be set up such that the correct fit parameter is the FWHM, Labview fit has an error that makes it about 2/3 the FHWM!
+
+NOTE: the phase values should be wrapped such that they are always within some range we can easily map onto a waveplate position.
+
+Plot the spectrum, the fit, and the the model with the initial guess. 
+
+If the fit quality is sufficiently good (GUI or easy to modify residuals threshold in script before running?), produce a popup asking user whether they want to continue, 
+change the phase, or quit the program.
+
+- If they hit change phase, provide a popup asking by how much, and then rotate the waveplate accordingly (and update local variable), collect a new spectrum, then redo the fit setup loop.
+
+If continue, collect a new spectrum, and this time use the previous best fit parameters as constants, and fit ONLY the phase. 
+
+--- Stabilization LOOP
+The waveplate rotator cannot rotate continuously (+/- 720deg), so we need to lock it's position within a range, and wrap positions to that range... 
+I think it's 45 degrees for a pi phase change, so we should just stick with 0 to 45 degrees for simplicity, probably.
+(But if those are the bounds, then the program shouldn't start with a default position of 0 degrees)
+
+Simplest control scheme: Take current phase, and tell the waveplate rotator to move the correct amount to correct for it.
+This introduces some instability as the phase is not very steady, so the next best thing would be averaging over time and only rotating if there's a trend...
