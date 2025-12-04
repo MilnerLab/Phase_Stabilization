@@ -79,14 +79,3 @@ def run_plot(
         print("Live plot finished.")
         plt.ioff()
         plt.show()
-
-
-def main() -> None:
-    # Not used as entry point anymore, but you can keep it for tests
-    raise SystemExit(
-        "Run 'python -m phase_control.app' instead of phase_control.analysis.plot."
-    )
-
-
-if __name__ == "__main__":
-    main()

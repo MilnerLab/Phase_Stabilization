@@ -23,9 +23,7 @@ class Spectrometer:
     - do any GUI or plotting
     """
 
-    def __init__(self, config: Optional[SpectrometerConfig] = None) -> None:
-        if config is None:
-            config = SpectrometerConfig()
+    def __init__(self, config: SpectrometerConfig) -> None:
         self.config: SpectrometerConfig = config
 
         self._is_open: bool = False

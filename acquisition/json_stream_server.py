@@ -25,14 +25,7 @@ def main() -> None:
     This script is intended to be started by a 64-bit Python process
     via subprocess, so that the data can be analyzed in a 64-bit environment.
     """
-    config = SpectrometerConfig(
-        device_index=0,
-        exposure_ms=50.0,
-        average=1,
-        dark_subtraction=0,
-        mode=0,
-        scan_delay=0,
-    )
+    config = SpectrometerConfig()
 
     with Spectrometer(config=config) as spectrometer:
         # Acquire one spectrum to get static info

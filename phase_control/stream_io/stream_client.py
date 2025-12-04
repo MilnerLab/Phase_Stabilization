@@ -40,11 +40,7 @@ class SpectrometerStreamClient:
             2. environment variable 'PYTHON32_PATH'
             3. acquisition.config.PYTHON32_PATH
         """
-        self.python32_path = (
-            python32_path
-            or os.environ.get("PYTHON32_PATH")
-            or PYTHON32_PATH
-        )
+        self.python32_path = PYTHON32_PATH
 
         self._proc: Optional[subprocess.Popen[str]] = None
         self._meta: Optional[StreamMeta] = None
