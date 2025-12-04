@@ -1,13 +1,13 @@
 # Project Setup & Useful Commands
 
-This repository contains several Python tools and apps used in the lab.  
-Below is a quick reference for setting up the environment and running the programs.
+This repository contains .  
+Below is a quick reference for setting up the environments and running the programs.
 
 ---
 
 ## 1. Virtual Environment
 
-### 1.1 Create / check / activate environment
+### 1.1 Creates / checks / activates environments
 
 Use the provided PowerShell script:
 
@@ -17,7 +17,7 @@ Use the provided PowerShell script:
 
 This script will:
 
-* Create the `.venv` virtual environment if it does not exist
+* Creates both virtual environments (`.venv32` and `.venv64`) if they do not exist
 * Activate the virtual environment
 * Install / update the required packages
 * Install / update the recommended extensions
@@ -27,7 +27,8 @@ This script will:
 If you need to activate the environment manually:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
+.\.venv32\Scripts\Activate.ps1
+.\.venv64\Scripts\Activate.ps1
 ```
 
 ---
@@ -36,13 +37,12 @@ If you need to activate the environment manually:
 
 ### 2.1 Update Python requirements file
 
-From within the active virtual environment:
+From within the active virtual environment (choose correct venv):
 
 ```powershell
-python -m pip freeze > _requirements.txt
+python -m pip freeze > phase_control\_requirements_phase_control.txt
+python -m pip freeze > acquisition\_requirements_acquisition.txt
 ```
-
-This writes all currently installed packages into `_requirements.txt`.
 
 ### 2.2 Export VS Code extensions
 

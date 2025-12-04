@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug c2t_calculation",
+      "type": "python",
+      "request": "launch",
+      "module": "apps.c2t_calculation.script",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+  ]
+}

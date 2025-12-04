@@ -1,7 +1,6 @@
-# spm002/dll.py
+# acquisition/spm002/dll.py
 import ctypes as ct
 import os
-from typing import Optional
 
 from .exceptions import SpectrometerError
 
@@ -31,7 +30,8 @@ def _find_dll_path() -> str:
     if os.path.isfile(candidate_in_package):
         return candidate_in_package
 
-    project_root = os.path.dirname(package_dir)
+    project_root = os.path.dirname(os.path.dirname(package_dir))
+    # project_root now points to repo root (…/spm-project)
     candidate_in_root = os.path.join(project_root, "PhotonSpectr.dll")
     if os.path.isfile(candidate_in_root):
         return candidate_in_root

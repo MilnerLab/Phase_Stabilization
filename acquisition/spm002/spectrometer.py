@@ -1,4 +1,4 @@
-# spm002/spectrometer.py
+# acquisition/spm002/spectrometer.py
 from typing import Optional, List
 import ctypes as ct
 

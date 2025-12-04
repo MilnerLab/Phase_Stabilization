@@ -1,4 +1,4 @@
-# spm002/config.py
+# acquisition/spm002/config.py
 from dataclasses import dataclass
 
 
