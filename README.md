@@ -75,7 +75,7 @@ All applications are started via Python’s module syntax from the repository ro
 
 
 ```powershell
-python -m plot
+python -m analysis.plot
 ```
 
 ---
