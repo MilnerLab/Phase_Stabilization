@@ -28,10 +28,6 @@ class ElliptecRotator:
         self._initialize(port, min_address, max_address)
 
 
-    @property
-    def delta_angle(self) -> Angle:
-        return self._current_angle
-
     def rotate(self, angle: Angle) -> None:
         
         if float(angle) == 0.0:
@@ -41,8 +37,6 @@ class ElliptecRotator:
 
         self._validate_new_delta_angle(new_angle)
         self._move_relative(angle)
-
-        self._current_angle = Angle(self._current_angle + angle)
 
     def home(self) -> None:
         self._device.Home(ELLBaseDevice.DeviceDirection.Linear)

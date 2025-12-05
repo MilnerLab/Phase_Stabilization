@@ -68,13 +68,13 @@ def run_analysis(
                 first = False
 
     
-            if phase_tracker.current_phase is not None:
-                delta_phase = phase_corrector.update(phase_tracker.current_phase)
-            else:
-                delta_phase = Angle(0)
-                
-            ell.rotate(Angle(-delta_phase * 45/360))
-            print("Rotating", -delta_phase.Deg * 45/360)
+            if phase_tracker.current_phase is None:
+                raise ValueError("Should have a value.")
+            
+            correction_angle = phase_corrector.update(phase_tracker.current_phase)
+            
+            ell.rotate(correction_angle)
+            print("Rotating", correction_angle)
             
 
             line.set_ydata(current_spectrum.intensity)

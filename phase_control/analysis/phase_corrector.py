@@ -6,18 +6,24 @@ import numpy as np
 from base_lib.models import Angle, AngleUnit, Prefix
 
 STARTING_PHASE = Angle(0, AngleUnit.DEG)
+CONVERSION_CONST = float(45/360)
+CORRECTION_SIGN = -1
 
 @dataclass
 class PhaseCorrector:
-    correction_phase: Angle = Angle(0, AngleUnit.DEG)
+    _correction_angle: Angle = Angle(0, AngleUnit.DEG)
 
     def update(self, phase: Angle) -> Angle:
         
         if np.abs(Angle(phase - STARTING_PHASE)) > Angle(10, AngleUnit.DEG):
-                self.correction_phase = Angle(phase - STARTING_PHASE)
-                print("Correction needed!")
+            _correction_phase = Angle(phase - STARTING_PHASE)
+            print("Correction needed!")
         else:
-            self.correction_phase = Angle(0)
+            _correction_phase = Angle(0)
+            
+        self._correction_angle = Angle(CORRECTION_SIGN * self._convert_phase_to_angle(_correction_phase))
+        
+        return self._correction_angle
 
-        return self.correction_phase
-
+    def _convert_phase_to_angle(self, phase: Angle) -> Angle:
+        return Angle(phase * CONVERSION_CONST)
