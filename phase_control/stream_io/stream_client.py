@@ -110,9 +110,6 @@ class SpectrometerStreamClient:
             device_index=meta_raw["device_index"],
             num_pixels=meta_raw["num_pixels"],
             wavelengths=meta_raw["wavelengths"],  # may be None
-            exposure_ms=meta_raw["exposure_ms"],
-            average=meta_raw["average"],
-            dark_subtraction=meta_raw["dark_subtraction"],
         )
 
         return self._meta

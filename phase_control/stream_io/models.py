@@ -12,9 +12,6 @@ class StreamMeta:
     device_index: int
     num_pixels: int
     wavelengths: Optional[List[float]]
-    exposure_ms: float
-    average: int
-    dark_subtraction: int
 
 
 @dataclass

@@ -37,11 +37,6 @@ def run_plot(
 
     ax.set_xlabel(x_label)
     ax.set_ylabel("Counts")
-    ax.set_title(
-        f"Live spectrum (Device {buffer.meta.device_index}, "
-        f"{buffer.meta.exposure_ms:.1f} ms, avg={buffer.meta.average})"
-    )
-
     fig.tight_layout()
     fig.canvas.draw()
     fig.canvas.flush_events()
