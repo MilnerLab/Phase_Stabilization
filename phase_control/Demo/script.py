@@ -21,6 +21,7 @@ phases = []
 
 for s in spectra:
     phase_tracker.update(s)
+    # phase_correcter(phase_tracker.current_phase)
     phases.append(phase_tracker.current_phase)
 
 fig, ax = plt.subplots(figsize=(8, 4))
