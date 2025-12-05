@@ -26,4 +26,4 @@ class PhaseCorrector:
         return self._correction_angle
 
     def _convert_phase_to_angle(self, phase: Angle) -> Angle:
-        return Angle(phase * CONVERSION_CONST)
+        return Angle(phase.Deg * CONVERSION_CONST, AngleUnit.DEG)
