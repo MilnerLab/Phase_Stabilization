@@ -1,10 +1,12 @@
 from pathlib import Path
 from matplotlib import pyplot as plt
 
-from base_lib.models import Length, Prefix, Range
+from base_lib.models import Angle, Length, Prefix, Range
 from phase_control.Demo.data_io.data_loader import load_spectra
 from phase_control.analysis.config import AnalysisConfig
+from phase_control.analysis.phase_corrector import PhaseCorrector
 from phase_control.analysis.phase_tracker import PhaseTracker
+from phase_control.correction_io.elliptec_ell14 import ElliptecRotator
 from phase_control.domain.models import Spectrum
 from phase_control.domain.plotting import plot_model, plot_phase, plot_spectrogram
 
@@ -17,12 +19,19 @@ spectra = load_spectra(path)
 spectra_cut = [s.cut(config.wavelength_range) for s in spectra]
 
 phase_tracker = PhaseTracker(config)
+phase_corrector = PhaseCorrector()
+ell = ElliptecRotator()
 phases = []
 
 for s in spectra:
     phase_tracker.update(s)
-    # phase_correcter(phase_tracker.current_phase)
-    phases.append(phase_tracker.current_phase)
+    
+    if phase_tracker.current_phase is not None:
+        delta = phase_corrector.update(phase_tracker.current_phase)
+    else:
+        delta = Angle(0)
+        
+    ell.rotate(delta)
 
 fig, ax = plt.subplots(figsize=(8, 4))
 #plot_spectrogram(ax, spectra_cut[0])

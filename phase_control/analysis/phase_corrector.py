@@ -1,53 +1,35 @@
-from collections import deque
 from dataclasses import dataclass, field
-from typing import Deque
+from typing import Optional
 
-from base_lib.models import Angle
+import numpy as np
+
+from base_lib.models import Angle, AngleUnit, Prefix
+
 
 @dataclass
 class PhaseCorrector:
-    low_threshold: Angle          
-    high_threshold: Angle         
-    window_size: int = 10         
+    
+    correction_phase: Optional[Angle] = field(default=None, init=False)
+    _starting_phase: Optional[Angle] = field(default=None, init=False, repr=False)
+    _last_moved_phase: Optional[Angle] = field(default=None, init=False, repr=False)
 
-    _history: Deque[Angle] = field(init=False, repr=False)
-    _is_high: bool = field(default=False, init=False)
-
-    def __post_init__(self) -> None:
-        if self.low_threshold >= self.high_threshold:
-            raise ValueError("low_threshold must be smaller than high_threshold")
-        self._history = deque(maxlen=self.window_size)
-
-    @property
-    def history(self) -> list[Angle]:
-        """Return the stored phases (oldest -> newest)."""
-        return list(self._history)
-
-    @property
-    def is_high(self) -> bool:
-        """Current Schmitt-trigger output."""
-        return self._is_high
-
-    def update(self, phase: Angle) -> bool:
-        """
-        Add a new phase value and update Schmitt-trigger state.
-
-        Returns the current Schmitt output (True = high, False = low).
-        """
-        self._history.append(phase)
-
-        v = phase
-        low = self.low_threshold
-        high = self.high_threshold
-
-        # klassischer Schmitt-Trigger:
-        if not self._is_high:
-            # waren bisher im "low"-Zustand
-            if v >= high:
-                self._is_high = True
+    def update(self, phase: Angle) -> Angle:
+        
+        if self._starting_phase is None:
+            self._starting_phase = phase
+            self.correction_phase = Angle(0)
         else:
-            # waren bisher im "high"-Zustand
-            if v <= low:
-                self._is_high = False
+            if self._last_moved_phase is None:
+                self.correction_phase = Angle(phase - self._starting_phase)
+                self._last_moved_phase = phase
+            else:
+                if np.abs(Angle(phase - self._last_moved_phase)) > Angle(2, AngleUnit.DEG):
+                    self.correction_phase = Angle(phase - self._last_moved_phase)
+                else:
+                    self.correction_phase = Angle(0)
 
-        return self._is_high
+        return self.correction_phase
+
+    def reset(self) -> None:
+        self._starting_phase = None
+        self.correction_phase = None

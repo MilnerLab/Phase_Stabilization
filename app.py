@@ -2,6 +2,7 @@
 import threading
 from typing import NoReturn
 
+from phase_control.analysis.run_analysis import run_analysis
 from phase_control.stream_io import (
     SpectrometerStreamClient,
     FrameBuffer,
@@ -58,7 +59,7 @@ def main() -> None:
 
     try:
         # Run plotting in the main thread
-        run_plot(buffer=buffer, stop_event=stop_event)
+        run_analysis(buffer=buffer, stop_event=stop_event)
     finally:
         # Tell reader to stop and clean up
         stop_event.set()
