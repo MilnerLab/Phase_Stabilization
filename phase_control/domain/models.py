@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from base_lib.models import Length, Prefix
+from base_lib.models import Length, Prefix, Range
 
 @dataclass
 class Spectrum:
@@ -26,3 +26,13 @@ class Spectrum:
         intensities = intensities / np.amax(intensities)
         
         return cls([Length(w, Prefix.NANO) for w in wavelengths], intensities)
+    
+    def cut(self, range_wl: Range) -> Spectrum:
+        wave = []
+        intensity = []
+        for i in range(len(self.wavelengths)):
+            if range_wl.is_in_range(self.wavelengths[i]):
+                wave.append(self.wavelengths[i])
+                intensity.append(self.intensity[i])
+                
+        return Spectrum(wave, intensity)     
