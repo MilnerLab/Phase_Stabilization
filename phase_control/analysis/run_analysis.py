@@ -39,8 +39,11 @@ def run_analysis(
     plt.ion()
     fig, ax = plt.subplots()
 
-    (line,) = ax.plot(spec0.wavelengths_nm, spec0.intensity)
-    (line2,) = ax.plot(spec0.wavelengths_nm, spec0.intensity)
+    (line,) = ax.plot(spec0.wavelengths_nm, spec0.intensity) #for current spectrum
+    (line2,) = ax.plot(spec0.wavelengths_nm, spec0.intensity) #for current fit
+    (line3,) = ax.plot(spec0.wavelengths_nm, spec0.intensity)
+
+    first = True
 
     ax.set_xlabel(x_label)
     ax.set_ylabel("Counts")
@@ -56,8 +59,13 @@ def run_analysis(
                 # No data yet, avoid busy-wait
                 time.sleep(0.01)
                 continue
-            
+
             phase_tracker.update(current_spectrum)
+
+            if first:
+                line3.set_ydata(current_spectrum.intensity)
+                first = False
+
     
             if phase_tracker.current_phase is not None:
                 delta_phase = phase_corrector.update(phase_tracker.current_phase)
@@ -70,6 +78,7 @@ def run_analysis(
 
             line.set_ydata(current_spectrum.intensity)
             line2.set_ydata(usCFG_projection(current_spectrum.wavelengths_nm, **phase_tracker._config.to_fit_kwargs(usCFG_projection)))
+            
             ax.relim()
             ax.autoscale_view()
 
