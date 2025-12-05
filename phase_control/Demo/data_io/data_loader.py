@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import List
 
+from base_lib.models import Length, Prefix, Range
 from phase_control.domain.models import Spectrum
 
 def load_spectra(path: str | Path) -> List[Spectrum]:
