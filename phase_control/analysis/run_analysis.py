@@ -54,11 +54,12 @@ def run_analysis(
 
     try:
         while plt.fignum_exists(fig.number) and not stop_event.is_set():
-            current_spectrum = buffer.get_latest().cut(config.wavelength_range)
+            current_spectrum = buffer.get_latest()
             if current_spectrum is None:
-                # No data yet, avoid busy-wait
                 time.sleep(0.01)
                 continue
+
+            current_spectrum = current_spectrum.cut(config.wavelength_range)
 
             phase_tracker.update(current_spectrum)
 

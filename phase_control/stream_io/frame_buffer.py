@@ -28,14 +28,16 @@ class FrameBuffer:
         with self._lock:
             self._latest = frame
 
-    def get_latest(self) -> Spectrum:
+    def get_latest(self) -> Spectrum | None:
         """
         Return the most recent frame, or None if no frame has been stored yet.
         """
         if self._latest is None:
-            raise ValueError("No frame detected.")
+            return None
         with self._lock:
-            return self._generate_Spectrogram(self._latest)
+            spec = self._generate_Spectrogram(self._latest)
+            self._latest = None
+            return spec
 
     def _generate_Spectrogram(self, frame: StreamFrame) -> Spectrum:
         if self.meta.wavelengths is not None:
