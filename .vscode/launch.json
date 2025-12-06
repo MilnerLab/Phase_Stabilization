@@ -3,12 +3,21 @@
   "configurations": [
     
     
+    
 
     {
-      "name": "Debug",
+      "name": "Debug script",
       "type": "python",
       "request": "launch",
       "module": "phase_control.Demo.script",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Debug app",
+      "type": "python",
+      "request": "launch",
+      "module": "app",
       "console": "integratedTerminal",
       "justMyCode": true
     },

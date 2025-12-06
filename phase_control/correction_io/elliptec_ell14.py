@@ -34,9 +34,13 @@ class ElliptecRotator:
             return
 
         new_angle = Angle(self._current_angle + angle)
+        print("--------------------------")
+        print("New wp angle:", new_angle.Deg)
 
         self._validate_new_delta_angle(new_angle)
         self._move_relative(angle)
+        print("Current wp angle:", self._current_angle.Deg)
+        print("--------------------------")
 
     def home(self) -> None:
         self._device.Home(ELLBaseDevice.DeviceDirection.Linear)
