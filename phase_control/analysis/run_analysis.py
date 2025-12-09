@@ -1,6 +1,8 @@
 # phase_control/analysis/plot.py
+from copy import deepcopy
 import time
 import threading
+from turtle import clone, color
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -39,11 +41,14 @@ def run_analysis(
     plt.ion()
     fig, ax = plt.subplots()
 
-    (line,) = ax.plot(spec0.wavelengths_nm, spec0.intensity) #for current spectrum
+    (line,) = ax.plot(spec0.wavelengths_nm, spec0.intensity, ) #for current spectrum
     (line2,) = ax.plot(spec0.wavelengths_nm, spec0.intensity) #for current fit
     (line3,) = ax.plot(spec0.wavelengths_nm, spec0.intensity)
 
     first = True
+    line.set_color('blue')
+    line2.set_color('green')
+    line3.set_color('red')
 
     ax.set_xlabel(x_label)
     ax.set_ylabel("Counts")
@@ -69,10 +74,10 @@ def run_analysis(
 
             phase_tracker.update(current_spectrum)
 
-            if first:
-                phase_tracker._config.phase = Angle(0)
-                line3.set_ydata(usCFG_projection(current_spectrum.wavelengths_nm, **phase_tracker._config.to_fit_kwargs(usCFG_projection)))
-                first = False
+            line3_config = deepcopy(phase_tracker._config)
+            line3_config.phase = Angle(0)
+            
+            line3.set_ydata(usCFG_projection(current_spectrum.wavelengths_nm, **line3_config.to_fit_kwargs(usCFG_projection)))
     
             if phase_tracker.current_phase is None:
                 print("No phase detected.")

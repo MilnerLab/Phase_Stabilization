@@ -1,7 +1,7 @@
 from collections import deque
 import inspect
+from locale import currency
 from typing import Any
-from uuid import MAX
 import lmfit
 from base_lib.models import Angle
 from phase_control.analysis.config import AnalysisConfig, FitParameter
@@ -15,21 +15,30 @@ class PhaseTracker():
     current_phase: Angle | None = None
     _configs: deque[FitParameter] = deque(maxlen=MAX_LEN)
     
-    def __init__(self, start_config: AnalysisConfig) -> None:
-        self._config = start_config
+    def __init__(self, start_config: FitParameter) -> None:
+        self._config: FitParameter = start_config
     
     def update(self, spectrum: Spectrum) -> None:
-        if len(self._configs) < MAX_LEN:
+        if len(self._configs) < MAX_LEN and self.current_phase is None:
             self._configs.append(self._initialize_fit_parameters(spectrum))
+            print("gathering configs")
             return
         else:
-            self._configs.append(self._fit_phase(spectrum))
-            self._config, phase_std = FitParameter.mean(self._configs)
-            
-            print("phase std:", phase_std.Deg)
-            self.current_phase = self._config.phase
+            if self.current_phase is None:
+                self._config, phase_std = FitParameter.mean(self._configs)
+                
+            if len(self._configs) < MAX_LEN:
+                print("gathering configs")
+                self._configs.append(self._fit_phase(spectrum))
+                self.current_phase = Angle(0)
+            else:
+                new_config, phase_std = FitParameter.mean(self._configs)
+                self._configs.clear()
+                print("phase std:", phase_std.Deg)
+                self.current_phase = new_config.phase
+                self._config = new_config.phase
     
-    def _initialize_fit_parameters(self, spectrum: Spectrum) -> AnalysisConfig:
+    def _initialize_fit_parameters(self, spectrum: Spectrum) -> FitParameter:
         
         first_arg_name = self._get_first_arg_name()
         model = lmfit.Model(usCFG_projection, independent_vars=[first_arg_name])
@@ -38,11 +47,10 @@ class PhaseTracker():
         fit_kwargs[first_arg_name] = spectrum.wavelengths_nm
         
         result = model.fit(spectrum.intensity, **fit_kwargs, max_nfev=int(1000000))
-        print(result.rsquared)
-        return AnalysisConfig.from_fit_result(self._config, result)
+        return FitParameter.from_fit_result(self._config, result)
     
     
-    def _fit_phase(self, spectrum: Spectrum) -> AnalysisConfig:
+    def _fit_phase(self, spectrum: Spectrum) -> FitParameter:
         
         first_arg_name = self._get_first_arg_name()
         model = lmfit.Model(usCFG_projection, independent_vars=[first_arg_name])
@@ -63,7 +71,7 @@ class PhaseTracker():
             **x_kwargs,
         )
         
-        return AnalysisConfig.from_fit_result(self._config, result)
+        return FitParameter.from_fit_result(self._config, result)
 
     def _get_first_arg_name(self) -> str:
         sig = inspect.signature(usCFG_projection)
