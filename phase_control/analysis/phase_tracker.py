@@ -33,6 +33,7 @@ class PhaseTracker():
         fit_kwargs[first_arg_name] = spectrum.wavelengths_nm
         
         result = model.fit(spectrum.intensity, **fit_kwargs, max_nfev=int(10000))
+        print(result.rsquared)
         return AnalysisConfig.from_fit_result(self._config, result)
     
     
