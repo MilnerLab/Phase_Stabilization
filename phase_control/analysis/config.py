@@ -1,6 +1,7 @@
 from dataclasses import dataclass, fields, asdict
 import inspect
-from typing import Any, Callable, TypeVar, get_type_hints
+import math
+from typing import Any, Callable, ClassVar, Sequence, TypeVar, get_type_hints
 
 import lmfit
 import numpy as np
@@ -17,17 +18,11 @@ class FitParameter:
     baseline: float = 0.3338
     phase: Angle = Angle(-3.34)
     acceleration: float = 0.0979 * np.pi * 2
-    rsquared: float | None = None
+    rsquared: float = 1.0
     
     def to_fit_kwargs(self, func: Callable[..., Any]) -> dict[str, float]:
         sig = inspect.signature(func)
         param_names = list(sig.parameters.keys())[1:]  
-
-        type_converters = {
-            Length: lambda l: l.value(Prefix.NANO),
-            Angle:  lambda a: a.Rad,
-            float:  float,
-        }
 
         kwargs: dict[str, float] = {}
         type_hints = get_type_hints(type(self))
@@ -35,23 +30,16 @@ class FitParameter:
         for name in param_names:
             val = getattr(self, name)
             field_type = type_hints.get(name, type(val))
-            conv = type_converters.get(field_type, lambda v: v)
+            conv = type(self)._to_float_conv(field_type)
             kwargs[name] = conv(val)
 
         return kwargs
+
     
     @classmethod
     def from_fit_result(cls: type[T], base: T, result: lmfit.model.ModelResult) -> T:
-        best = result.best_values  
-
-        type_converters: dict[type[Any], Callable[[float], Any]] = {
-            Length: lambda v: Length(v, Prefix.NANO),
-            Angle:  lambda v: Angle(v),
-            float:  float,
-        }
-
+        best = result.best_values
         type_hints: dict[str, type[Any]] = get_type_hints(cls)
-
         kwargs: dict[str, Any] = {}
 
         for f in fields(cls):
@@ -59,16 +47,77 @@ class FitParameter:
 
             if name in best:
                 field_type = type_hints.get(name, float)
-                conv = type_converters.get(field_type, lambda v: v)
+                conv = cls._from_float_conv(field_type)
                 kwargs[name] = conv(best[name])
             elif name == "rsquared":
-                kwargs[name] = result.rsquared
+                kwargs[name] = float(result.rsquared)
             else:
                 kwargs[name] = getattr(base, name)
-        
-        
 
-        return cls(**kwargs, )
+        return cls(**kwargs)
+
+    @classmethod
+    def mean(cls: type[T], items: Sequence[T]) -> tuple[T, Angle]:
+        """
+        Erzeuge eine neue FitParameter-Instanz mit Mittelwerten aller Felder
+        und gib zusätzlich die Standardabweichung der Phase zurück (in Rad).
+        """
+        if not items:
+            raise ValueError("FitParameter.mean() braucht mindestens ein Element")
+
+        type_hints = get_type_hints(cls)
+        kwargs: dict[str, Any] = {}
+
+        phase_std: float = 0.0  # wird im Loop gefüllt
+
+        for f in fields(cls):
+            name = f.name
+            values = [getattr(p, name) for p in items]
+
+            field_type = type_hints.get(name, type(values[0]))
+            to_float = cls._to_float_conv(field_type)
+            from_float = cls._from_float_conv(field_type)
+
+            if field_type in cls._TO_FLOAT:
+                nums = [to_float(v) for v in values]
+                mean_val = sum(nums) / len(nums)
+                kwargs[name] = from_float(mean_val)
+
+                # Speziell für Phase zusätzlich StdAbw berechnen
+                if name == "phase":
+                    if len(nums) > 1:
+                        var = sum((x - mean_val) ** 2 for x in nums) / len(nums)
+                        phase_std = math.sqrt(var)
+                    else:
+                        phase_std = 0.0
+            else:
+                # nicht-numerische Felder würden hier einfach übernommen
+                kwargs[name] = values[0]
+
+        mean_fit = cls(**kwargs)
+        return mean_fit, Angle(phase_std)
+
+
+    _TO_FLOAT: ClassVar[dict[type[Any], Callable[[Any], float]]] = {
+        Length: lambda l: l.value(Prefix.NANO),
+        Angle:  lambda a: a.Rad,
+        float:  float,
+    }
+
+    _FROM_FLOAT: ClassVar[dict[type[Any], Callable[[float], Any]]] = {
+        Length: lambda v: Length(v, Prefix.NANO),
+        Angle:  lambda v: Angle(v),
+        float:  float,
+    }
+
+    @classmethod
+    def _to_float_conv(cls, field_type: type[Any]) -> Callable[[Any], float]:
+        return cls._TO_FLOAT.get(field_type, lambda v: v)
+
+    @classmethod
+    def _from_float_conv(cls, field_type: type[Any]) -> Callable[[float], Any]:
+        return cls._FROM_FLOAT.get(field_type, lambda v: v)
+
 
 @dataclass
 class AnalysisConfig(FitParameter):
