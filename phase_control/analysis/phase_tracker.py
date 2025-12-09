@@ -7,7 +7,7 @@ from phase_control.analysis.config import AnalysisConfig
 from phase_control.domain.models import Spectrum
 from base_lib.functions import usCFG_projection
 
-RSQUARED_THRESHOLD = 0.95
+RSQUARED_THRESHOLD = 0.000005
 
 class PhaseTracker():
     current_phase: Angle | None = None
@@ -21,9 +21,12 @@ class PhaseTracker():
         else:
             new_config = self._fit_phase(spectrum)
 
+        print("RSquared: ", new_config.rsquared)
         if new_config.rsquared > RSQUARED_THRESHOLD:
             self.current_phase = new_config.phase
             self._config = new_config
+        else:
+            self.current_phase = Angle(0) #should replace with target phase
     
     def _initialize_fit_parameters(self, spectrum: Spectrum) -> AnalysisConfig:
         
@@ -33,7 +36,7 @@ class PhaseTracker():
         fit_kwargs: dict[str, Any] = self._config.to_fit_kwargs(usCFG_projection)
         fit_kwargs[first_arg_name] = spectrum.wavelengths_nm
         
-        result = model.fit(spectrum.intensity, **fit_kwargs, max_nfev=int(10000))
+        result = model.fit(spectrum.intensity, **fit_kwargs, max_nfev=int(1000000))
         print(result.rsquared)
         return AnalysisConfig.from_fit_result(self._config, result)
     

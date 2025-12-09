@@ -60,6 +60,12 @@ def run_analysis(
                 continue
 
             current_spectrum = current_spectrum.cut(config.wavelength_range)
+            line.set_ydata(current_spectrum.intensity)
+            ax.relim()
+            ax.autoscale_view()
+
+            fig.canvas.draw()
+            fig.canvas.flush_events()
 
             phase_tracker.update(current_spectrum)
 
@@ -69,7 +75,9 @@ def run_analysis(
                 first = False
     
             if phase_tracker.current_phase is None:
-                raise ValueError("Should have a value.")
+                print("No phase detected.")
+                time.sleep(2)
+                continue
             
             correction_angle = phase_corrector.update(phase_tracker.current_phase)
             
@@ -77,7 +85,7 @@ def run_analysis(
             ell.rotate(correction_angle)
             
 
-            line.set_ydata(current_spectrum.intensity)
+            
             line2.set_ydata(usCFG_projection(current_spectrum.wavelengths_nm, **phase_tracker._config.to_fit_kwargs(usCFG_projection)))
             
             ax.relim()
