@@ -57,18 +57,13 @@ class FitParameter:
         return cls(**kwargs)
 
     @classmethod
-    def mean(cls: type[T], items: Sequence[T]) -> tuple[T, Angle]:
-        """
-        Erzeuge eine neue FitParameter-Instanz mit Mittelwerten aller Felder
-        und gib zusätzlich die Standardabweichung der Phase zurück (in Rad).
-        """
+    def mean(cls: type[T], items: Sequence[T]) -> T:
+        
         if not items:
-            raise ValueError("FitParameter.mean() braucht mindestens ein Element")
+            raise ValueError("At least one argument in sequence.")
 
         type_hints = get_type_hints(cls)
         kwargs: dict[str, Any] = {}
-
-        phase_std: float = 0.0  # wird im Loop gefüllt
 
         for f in fields(cls):
             name = f.name
@@ -82,20 +77,11 @@ class FitParameter:
                 nums = [to_float(v) for v in values]
                 mean_val = sum(nums) / len(nums)
                 kwargs[name] = from_float(mean_val)
-
-                # Speziell für Phase zusätzlich StdAbw berechnen
-                if name == "phase":
-                    if len(nums) > 1:
-                        var = sum((x - mean_val) ** 2 for x in nums) / len(nums)
-                        phase_std = math.sqrt(var)
-                    else:
-                        phase_std = 0.0
             else:
-                # nicht-numerische Felder würden hier einfach übernommen
                 kwargs[name] = values[0]
 
         mean_fit = cls(**kwargs)
-        return mean_fit, Angle(phase_std)
+        return mean_fit
 
 
     _TO_FLOAT: ClassVar[dict[type[Any], Callable[[Any], float]]] = {

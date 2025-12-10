@@ -1,14 +1,12 @@
 from collections import deque
 import inspect
-from locale import currency
 from typing import Any
 import lmfit
 from base_lib.models import Angle
-from phase_control.analysis.config import AnalysisConfig, FitParameter
+from phase_control.analysis.config import FitParameter
 from phase_control.domain.models import Spectrum
 from base_lib.functions import usCFG_projection
 
-RSQUARED_THRESHOLD = 0.000005
 MAX_LEN = int(10)
 
 class PhaseTracker():
@@ -31,10 +29,11 @@ class PhaseTracker():
                 self._configs.append(self._fit_phase(spectrum))
                 self.current_phase = Angle(0)
             else:
-                new_config, phase_std = FitParameter.mean(self._configs)
+                new_config = FitParameter.mean(self._configs)
                 self._configs.clear()
                 self.current_phase = new_config.phase
                 self._config.phase = new_config.phase
+                print('Sicherheit', self._config.rsquared)
     
     def _initialize_fit_parameters(self, spectrum: Spectrum) -> FitParameter:
         
