@@ -33,11 +33,6 @@ class PlotTab:
         self._analysis_thread: Optional[threading.Thread] = None
         self._analysis_stop_event: Optional[threading.Event] = None
 
-        # Plot-Optionen
-        self._show_current_var = tk.BooleanVar(value=True)
-        self._show_fit_var = tk.BooleanVar(value=True)
-        self._show_zero_var = tk.BooleanVar(value=True)
-
         self._build_ui()
 
     # ------------------------------------------------------------------ #
@@ -54,28 +49,6 @@ class PlotTab:
         run_button = ttk.Button(frame, text="Run analysis", command=self._on_run_clicked)
         run_button.grid(row=0, column=0, sticky="ew", **pad)
 
-        # Plot-Optionen
-        options_frame = ttk.LabelFrame(frame, text="Plot options")
-        options_frame.grid(row=1, column=0, sticky="ew", **pad)
-        options_frame.columnconfigure(0, weight=1)
-
-        ttk.Checkbutton(
-            options_frame,
-            text="Show current spectrum",
-            variable=self._show_current_var,
-        ).grid(row=0, column=0, sticky="w", **pad)
-
-        ttk.Checkbutton(
-            options_frame,
-            text="Show fitted spectrum",
-            variable=self._show_fit_var,
-        ).grid(row=1, column=0, sticky="w", **pad)
-
-        ttk.Checkbutton(
-            options_frame,
-            text="Show zero-phase fit",
-            variable=self._show_zero_var,
-        ).grid(row=2, column=0, sticky="w", **pad)
 
     # ------------------------------------------------------------------ #
     # Analyse-Steuerung
