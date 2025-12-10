@@ -23,7 +23,7 @@ class PhaseTracker():
             return
         else:
             if self.current_phase is None:
-                self._config, phase_std = FitParameter.mean(self._configs)
+                self._config = FitParameter.mean(self._configs)
                 
             if len(self._configs) < MAX_LEN:
                 self._configs.append(self._fit_phase(spectrum))
@@ -33,7 +33,7 @@ class PhaseTracker():
                 self._configs.clear()
                 self.current_phase = new_config.phase
                 self._config.phase = new_config.phase
-                print('Sicherheit', self._config.rsquared)
+                print('Sicherheit', new_config.rsquared)
     
     def _initialize_fit_parameters(self, spectrum: Spectrum) -> FitParameter:
         
