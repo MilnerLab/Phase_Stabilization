@@ -28,15 +28,13 @@ class PhaseTracker():
                 self._config, phase_std = FitParameter.mean(self._configs)
                 
             if len(self._configs) < MAX_LEN:
-                print("gathering configs")
                 self._configs.append(self._fit_phase(spectrum))
                 self.current_phase = Angle(0)
             else:
                 new_config, phase_std = FitParameter.mean(self._configs)
                 self._configs.clear()
-                print("phase std:", phase_std.Deg)
                 self.current_phase = new_config.phase
-                self._config = new_config.phase
+                self._config.phase = new_config.phase
     
     def _initialize_fit_parameters(self, spectrum: Spectrum) -> FitParameter:
         
@@ -76,3 +74,4 @@ class PhaseTracker():
     def _get_first_arg_name(self) -> str:
         sig = inspect.signature(usCFG_projection)
         return next(iter(sig.parameters))
+    

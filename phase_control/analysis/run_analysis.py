@@ -1,5 +1,5 @@
 # phase_control/analysis/plot.py
-from copy import deepcopy
+from copy import copy, deepcopy
 import time
 import threading
 from turtle import clone, color
@@ -74,19 +74,18 @@ def run_analysis(
 
             phase_tracker.update(current_spectrum)
 
-            line3_config = deepcopy(phase_tracker._config)
+            line3_config = copy(phase_tracker._config)
             line3_config.phase = Angle(0)
             
             line3.set_ydata(usCFG_projection(current_spectrum.wavelengths_nm, **line3_config.to_fit_kwargs(usCFG_projection)))
     
             if phase_tracker.current_phase is None:
                 print("No phase detected.")
-                time.sleep(2)
+                time.sleep(1)
                 continue
             
             correction_angle = phase_corrector.update(phase_tracker.current_phase)
             
-            print("Rotating", correction_angle.Deg)
             ell.rotate(correction_angle)
             
 

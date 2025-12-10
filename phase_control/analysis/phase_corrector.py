@@ -7,12 +7,12 @@ import numpy as np
 from base_lib.models import Angle, AngleUnit, Prefix
 
 STARTING_PHASE = Angle(0, AngleUnit.DEG)
-PHASE_TOLERANCE = Angle(20, AngleUnit.DEG)
+PHASE_TOLERANCE = Angle(10, AngleUnit.DEG)
 
 # grober Startwert: 1° HWP ändert die Fit-Phase um ca. 4°
 # → HWP_deg = - phase_deg / 4
-CONVERSION_CONST = 45 / 180      # deg_HWP pro deg_Phase
-CORRECTION_SIGN = 1      
+CONVERSION_CONST = 1/4      # deg_HWP pro deg_Phase
+CORRECTION_SIGN = -1      
 
 from dataclasses import dataclass
 
@@ -21,13 +21,15 @@ class PhaseCorrector:
     _correction_angle: Angle = Angle(0, AngleUnit.DEG)
 
     def update(self, phase: Angle) -> Angle:
-        phase_wrapped = self._wrap_phase_pi(phase)
+        
+        phase_wrapped = self._wrap_phase_pi2(phase)
 
         phase_error = Angle(phase_wrapped - STARTING_PHASE)
 
         if np.abs(phase_error) > PHASE_TOLERANCE:
             correction_phase = phase_error
-            print("Correction needed!", correction_phase.Deg)
+            print("The current Phase: ", phase.Deg)
+            print("Correction:", correction_phase.Deg)
         else:
             correction_phase = Angle(0)
 
@@ -49,6 +51,14 @@ class PhaseCorrector:
         wrapped = (rad + 0.5 * pi) % pi - 0.5 * pi
         return Angle(wrapped *2, AngleUnit.RAD)
 
+    @staticmethod
+    def _wrap_phase_pi2(phase: Angle) -> Angle:
+        schritt = math.pi / 1.0
+        k = round(phase/schritt)
+        mahrfach = k * schritt
+        
+        return Angle(phase - mahrfach)
+    
     @staticmethod
     def _convert_phase_to_hwp(phase: Angle) -> Angle:
         phase_deg = phase.Deg
