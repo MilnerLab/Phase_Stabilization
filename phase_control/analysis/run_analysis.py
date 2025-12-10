@@ -21,9 +21,9 @@ from phase_control.stream_io import StreamMeta, FrameBuffer
 def run_analysis(
     buffer: FrameBuffer,
     stop_event: threading.Event,
+    config: AnalysisConfig,
 ) -> None:
     
-    config = AnalysisConfig()
     phase_tracker = PhaseTracker(config)
     phase_corrector = PhaseCorrector()
     ell = ElliptecRotator(max_address = "0") 

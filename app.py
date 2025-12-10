@@ -10,6 +10,7 @@ from phase_control.stream_io import (
     StreamMeta,
 )
 from phase_control.analysis.plot import run_plot
+from phase_control.ui.main_window import run_main_window
 
 
 def reader_loop(
@@ -59,7 +60,7 @@ def main() -> None:
 
     try:
         # Run plotting in the main thread
-        run_analysis(buffer=buffer, stop_event=stop_event)
+        run_main_window(buffer=buffer, stop_event=stop_event)
     finally:
         # Tell reader to stop and clean up
         stop_event.set()
