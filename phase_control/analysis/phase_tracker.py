@@ -33,7 +33,7 @@ class PhaseTracker():
                 new_config = FitParameter.mean(self._configs)
                 self._configs.clear()
                 
-                if new_config.rsquared > RSQUARED_THRESHOLD:
+                if True:
                     self.current_phase = new_config.phase
                     self._config.phase = new_config.phase
     

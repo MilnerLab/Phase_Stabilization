@@ -39,8 +39,8 @@ class ConfigTab:
         self._phase_var = tk.StringVar(value=f"{initial.phase.Rad:.6f}")
         self._acceleration_var = tk.StringVar(value=f"{initial.acceleration:.6f}")
 
-        wl_min = initial.wavelength_range.start.value(Prefix.NANO)
-        wl_max = initial.wavelength_range.end.value(Prefix.NANO)
+        wl_min = initial.wavelength_range.min.value(Prefix.NANO)
+        wl_max = initial.wavelength_range.max.value(Prefix.NANO)
         self._wl_min_var = tk.StringVar(value=f"{wl_min:.6f}")
         self._wl_max_var = tk.StringVar(value=f"{wl_max:.6f}")
 
@@ -120,11 +120,11 @@ class ConfigTab:
         )
         wl_min_nm = self._parse_float(
             self._wl_min_var.get(),
-            base.wavelength_range.start.value(Prefix.NANO),
+            base.wavelength_range.min.value(Prefix.NANO),
         )
         wl_max_nm = self._parse_float(
             self._wl_max_var.get(),
-            base.wavelength_range.end.value(Prefix.NANO),
+            base.wavelength_range.max.value(Prefix.NANO),
         )
 
         return AnalysisConfig(

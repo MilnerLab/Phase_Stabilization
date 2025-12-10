@@ -98,10 +98,7 @@ class PlotTab:
             run_analysis(
                 buffer=self._buffer,
                 stop_event=stop_event,
-                config=config,
-                show_current=self._show_current_var.get(),
-                show_fit=self._show_fit_var.get(),
-                show_zero_phase=self._show_zero_var.get(),
+                config=config
             )
 
         thread = threading.Thread(
