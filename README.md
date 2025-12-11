@@ -33,30 +33,6 @@ If you need to activate the environment manually:
 
 ---
 
-## 2. Updating Requirements and VS Code Extensions
-
-### 2.1 Update Python requirements file
-
-From within the active virtual environment (choose correct venv):
-
-```powershell
-python -m pip freeze > phase_control\_requirements_phase_control.txt
-python -m pip freeze > acquisition\_requirements_acquisition.txt
-```
-
-### 2.2 Export VS Code extensions
-
-To save the list of installed VS Code extensions:
-
-```powershell
-code --list-extensions > _extensions.txt
-```
-
-This writes all installed extensions into `_extensions.txt`.
-
----
-
-
 ## 3. Running the Applications
 
 All applications are started via Python’s module syntax from the repository root.
