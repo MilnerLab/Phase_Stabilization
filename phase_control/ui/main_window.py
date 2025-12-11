@@ -174,3 +174,15 @@ class MainWindow:
         self._set_running(False)
         self._stop_event.set()
         self._root.destroy()
+
+    def run(self) -> None:
+        self._root.mainloop()
+
+
+def run_main_window(
+    config: AnalysisConfig,
+    engine: AnalysisEngine,
+    stop_event: threading.Event,
+) -> None:
+    ui = MainWindow(config=config, engine=engine, stop_event=stop_event)
+    ui.run()
