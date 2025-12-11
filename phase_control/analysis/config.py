@@ -18,7 +18,7 @@ class FitParameter:
     baseline: float = 0.3338
     phase: Angle = Angle(-3.34)
     acceleration: float = 0.0979 * np.pi * 2
-    rsquared: float = 1.0
+    residual: float = 0
     
     def to_fit_kwargs(self, func: Callable[..., Any]) -> dict[str, float]:
         sig = inspect.signature(func)
@@ -49,8 +49,8 @@ class FitParameter:
                 field_type = type_hints.get(name, float)
                 conv = cls._from_float_conv(field_type)
                 kwargs[name] = conv(best[name])
-            elif name == "rsquared":
-                kwargs[name] = float(result.rsquared)
+            elif name == "residual":
+                kwargs[name] = float(np.sum(result.residual**2))
             else:
                 kwargs[name] = getattr(base, name)
 
