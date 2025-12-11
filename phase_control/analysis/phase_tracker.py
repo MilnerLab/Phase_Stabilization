@@ -7,7 +7,7 @@ from phase_control.analysis.config import FitParameter
 from phase_control.domain.models import Spectrum
 from base_lib.functions import usCFG_projection
 
-RSQUARED_THRESHOLD = 0.90
+RESIDUAL_THRESHOLD = 1
 MAX_LEN = int(10)
 
 class PhaseTracker():
@@ -33,7 +33,8 @@ class PhaseTracker():
                 new_config = FitParameter.mean(self._configs)
                 self._configs.clear()
                 
-                if True:
+                if new_config.residual < RESIDUAL_THRESHOLD:
+                    print("Residuals: ", new_config.residual)
                     self.current_phase = new_config.phase
                     self._config.phase = new_config.phase
     
