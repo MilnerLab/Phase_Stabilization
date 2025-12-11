@@ -85,7 +85,7 @@ class FitParameter:
     
     def copy_from(self, other: "FitParameter") -> None:
         for f in fields(self):
-            if f.name != "wavelength_range":
+            if (f.name != "wavelength_range") and (f.name != "avg_spectra") and (f.name != "residuals_threshold"):
                 setattr(self, f.name, getattr(other, f.name))
 
 

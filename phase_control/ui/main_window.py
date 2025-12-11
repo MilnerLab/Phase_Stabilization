@@ -149,7 +149,7 @@ class MainWindow:
         if not self._running:
             return
 
-        result = self._engine.run_once()
+        result = self._engine.step()
         if result is None:
             # no data yet -> try again a bit later
             self._schedule_next_step(delay_ms=50)
