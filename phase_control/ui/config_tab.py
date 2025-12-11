@@ -124,11 +124,11 @@ class ConfigTab:
         )
         wl_min_nm = self._parse_float(
             self._wl_min_var.get(),
-            cfg.wavelength_range.start.value(Prefix.NANO),
+            cfg.wavelength_range.min.value(Prefix.NANO),
         )
         wl_max_nm = self._parse_float(
             self._wl_max_var.get(),
-            cfg.wavelength_range.end.value(Prefix.NANO),
+            cfg.wavelength_range.max.value(Prefix.NANO),
         )
 
         tmp = AnalysisConfig(

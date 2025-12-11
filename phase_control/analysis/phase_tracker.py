@@ -1,20 +1,20 @@
 from collections import deque
 import inspect
-from typing import Any
+from typing import Any, cast
 import lmfit
 from base_lib.models import Angle
 from phase_control.analysis.config import FitParameter
 from phase_control.domain.models import Spectrum
 from base_lib.functions import usCFG_projection
 
-RESIDUAL_THRESHOLD = 1
+RESIDUAL_THRESHOLD = 5
 MAX_LEN = int(10)
 
 class PhaseTracker():
     current_phase: Angle | None = None
     
     def __init__(self, start_config: FitParameter) -> None:
-        self._config: FitParameter = start_config
+        self._config: FitParameter = cast(FitParameter, start_config)
         self._configs: deque[FitParameter] = deque(maxlen=MAX_LEN)
 
     def update(self, spectrum: Spectrum) -> None:

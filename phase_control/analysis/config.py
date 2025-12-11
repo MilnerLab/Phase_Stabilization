@@ -85,7 +85,8 @@ class FitParameter:
     
     def copy_from(self, other: "FitParameter") -> None:
         for f in fields(self):
-            setattr(self, f.name, getattr(other, f.name))
+            if f.name != "wavelength_range":
+                setattr(self, f.name, getattr(other, f.name))
 
 
     _TO_FLOAT: ClassVar[dict[type[Any], Callable[[Any], float]]] = {

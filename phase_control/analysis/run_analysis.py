@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, cast
 
 import numpy as np
 
 from base_lib.functions import usCFG_projection
 from base_lib.models import Angle
-from phase_control.analysis.config import AnalysisConfig
+from phase_control.analysis.config import AnalysisConfig, FitParameter
 from phase_control.analysis.phase_corrector import PhaseCorrector
 from phase_control.analysis.phase_tracker import PhaseTracker
 from phase_control.correction_io.elliptec_ell14 import ElliptecRotator
@@ -44,7 +44,7 @@ class AnalysisEngine:
         self._buffer = buffer
 
         # Helpers – they keep a reference to the same config instance
-        self._phase_tracker = PhaseTracker(self.config)
+        self._phase_tracker = PhaseTracker(cast(FitParameter, self.config))
         self._phase_corrector = PhaseCorrector()
         self._rotator = ElliptecRotator(max_address="0")
 
