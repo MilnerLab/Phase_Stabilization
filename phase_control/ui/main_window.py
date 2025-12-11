@@ -15,16 +15,23 @@ class MainWindow:
     """
     Main x64 UI:
 
-    - Top-level "Run analysis" button (hosted by the MainWindow).
-    - Tab "Plotting" with the embedded plot.
+    - Top-level "Run" and "Reset" buttons.
+    - Tab "Plotting" with embedded plot.
     - Tab "Config parameters" with AnalysisConfig fields.
 
-    The MainWindow orchestrates everything:
-    - on Run:
-        * pushes UI values into the shared config
-        * resets the AnalysisEngine
-        * starts a Tk .after loop that calls engine.run_once()
-          and passes the result to PlotTab + ConfigTab.
+    Behaviour:
+      - Run:
+          * stops any running loop
+          * applies FitParameter fields from UI -> config
+          * resets the AnalysisEngine
+          * starts Tk .after loop
+          * disables FitParameter entries and Run button, enables Reset.
+      - Reset:
+          * stops loop
+          * resets AnalysisEngine
+          * clears plot
+          * refreshes FitParameter fields from config
+          * re-enables FitParameter entries and Run button.
     """
 
     def __init__(
@@ -40,16 +47,24 @@ class MainWindow:
         self._root = tk.Tk()
         self._root.title("Phase control – Live analysis")
 
-        # Top control bar with Run button
+        # Top control bar with Run & Reset
         control_frame = ttk.Frame(self._root)
         control_frame.pack(side="top", fill="x")
 
         self._run_button = ttk.Button(
             control_frame,
-            text="Run analysis",
+            text="Run",
             command=self._on_run_clicked,
         )
         self._run_button.pack(side="left", padx=8, pady=4)
+
+        self._reset_button = ttk.Button(
+            control_frame,
+            text="Reset",
+            command=self._on_reset_clicked,
+            state="disabled",
+        )
+        self._reset_button.pack(side="left", padx=4, pady=4)
 
         # Notebook with tabs
         self._notebook = ttk.Notebook(self._root)
@@ -71,31 +86,59 @@ class MainWindow:
     # Analysis control
     # ------------------------------------------------------------------ #
 
+    def _set_running(self, running: bool) -> None:
+        """Update UI state for running/not-running."""
+        self._running = running
+        self._config_tab.set_running(running)
+        self._run_button.configure(state="disabled" if running else "normal")
+        self._reset_button.configure(state="normal" if running else "disabled")
+
     def _on_run_clicked(self) -> None:
         """
         Called when the Run button is pressed.
 
         - stop any running loop
-        - push UI values -> shared config
+        - push FitParameter UI values -> shared config
         - reset engine
         - start Tk .after loop
         """
-        self._stop_analysis()
+        self._stop_loop_only()
 
-        self._config_tab.apply_to_config()
+        # Update FitParameter values from UI into config
+        self._config_tab.apply_fit_parameters()
+        # Engine reset: new PhaseTracker etc. using current config
         self._engine.reset()
 
-        self._running = True
+        self._set_running(True)
         self._schedule_next_step(delay_ms=0)
 
-    def _stop_analysis(self) -> None:
-        self._running = False
+    def _on_reset_clicked(self) -> None:
+        """
+        Stop the analysis and reset everything:
+
+        - stop loop
+        - reset engine (internal state)
+        - clear plot
+        - refresh FitParameter fields from current config
+        - re-enable editing of FitParameter fields
+        """
+        self._stop_loop_only()
+        self._engine.reset()
+        self._plot_tab.clear()
+        self._config_tab.refresh_from_config()
+        self._set_running(False)
+
+    def _stop_loop_only(self) -> None:
+        """Stop the Tk .after loop without touching config/engine."""
+        if not self._running and self._after_id is None:
+            return
         if self._after_id is not None:
             try:
                 self._root.after_cancel(self._after_id)
             except Exception:
                 pass
         self._after_id = None
+        self._running = False  # UI state is updated by _set_running()
 
     def _schedule_next_step(self, delay_ms: int = 20) -> None:
         if not self._running:
@@ -106,7 +149,7 @@ class MainWindow:
         if not self._running:
             return
 
-        result = self._engine.step()
+        result = self._engine.run_once()
         if result is None:
             # no data yet -> try again a bit later
             self._schedule_next_step(delay_ms=50)
@@ -115,8 +158,8 @@ class MainWindow:
         # Update plot
         self._plot_tab.update_plot(result)
 
-        # Config was potentially updated by PhaseTracker (same instance),
-        # so mirror that back into the UI.
+        # Config may have been updated by PhaseTracker (same instance),
+        # so mirror that back into the FitParameter fields in the UI.
         self._config_tab.refresh_from_config()
 
         # Next step
@@ -127,18 +170,7 @@ class MainWindow:
     # ------------------------------------------------------------------ #
 
     def _on_close(self) -> None:
-        self._stop_analysis()
+        self._stop_loop_only()
+        self._set_running(False)
         self._stop_event.set()
         self._root.destroy()
-
-    def run(self) -> None:
-        self._root.mainloop()
-
-
-def run_main_window(
-    config: AnalysisConfig,
-    engine: AnalysisEngine,
-    stop_event: threading.Event,
-) -> None:
-    ui = MainWindow(config=config, engine=engine, stop_event=stop_event)
-    ui.run()

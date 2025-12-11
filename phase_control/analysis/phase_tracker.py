@@ -3,7 +3,7 @@ import inspect
 from typing import Any, cast
 import lmfit
 from base_lib.models import Angle
-from phase_control.analysis.config import FitParameter
+from phase_control.analysis.config import AnalysisConfig, FitParameter
 from phase_control.domain.models import Spectrum
 from base_lib.functions import usCFG_projection
 
@@ -13,27 +13,27 @@ MAX_LEN = int(10)
 class PhaseTracker():
     current_phase: Angle | None = None
     
-    def __init__(self, start_config: FitParameter) -> None:
-        self._config: FitParameter = cast(FitParameter, start_config)
-        self._configs: deque[FitParameter] = deque(maxlen=MAX_LEN)
+    def __init__(self, start_config: AnalysisConfig) -> None:
+        self._config: AnalysisConfig = start_config
+        self._fits: deque[FitParameter] = deque(maxlen=self._config.avg_spectra)
 
     def update(self, spectrum: Spectrum) -> None:
-        if len(self._configs) < MAX_LEN and self.current_phase is None:
-            self._configs.append(self._initialize_fit_parameters(spectrum))
+        if len(self._fits) < self._config.avg_spectra and self.current_phase is None:
+            self._fits.append(self._initialize_fit_parameters(spectrum))
             print("gathering configs")
             return
         else:
             if self.current_phase is None:
-                self._config.copy_from(FitParameter.mean(self._configs))
+                self._config.copy_from(FitParameter.mean(self._fits))
                 
-            if len(self._configs) < MAX_LEN:
-                self._configs.append(self._fit_phase(spectrum))
+            if len(self._fits) < self._config.avg_spectra:
+                self._fits.append(self._fit_phase(spectrum))
                 self.current_phase = Angle(0)
             else:
-                new_config = FitParameter.mean(self._configs)
-                self._configs.clear()
+                new_config = FitParameter.mean(self._fits)
+                self._fits.clear()
                 
-                if new_config.residual < RESIDUAL_THRESHOLD:
+                if new_config.residual < self._config.residuals_threshold:
                     print("Residuals: ", new_config.residual)
                     self.current_phase = new_config.phase
                     self._config.phase = new_config.phase

@@ -113,3 +113,5 @@ class FitParameter:
 @dataclass
 class AnalysisConfig(FitParameter):
     wavelength_range: Range[Length] = Range(Length(800, Prefix.NANO), Length(805, Prefix.NANO))
+    residuals_threshold: float = 5
+    avg_spectra: int = 10

@@ -15,8 +15,9 @@ class PlotTab:
     Plotting tab with an embedded Matplotlib figure.
 
     This tab does *not* know about the AnalysisEngine or the config.
-    It only exposes `update_plot(result)` to draw new data and hosts
-    local plot-options (visibility of the different curves).
+    It only exposes:
+      - update_plot(result) to draw new data
+      - clear() to reset the plot
     """
 
     def __init__(self, parent: ttk.Notebook) -> None:
@@ -101,10 +102,7 @@ class PlotTab:
     # ------------------------------------------------------------------ #
 
     def update_plot(self, result: AnalysisPlotResult) -> None:
-        """
-        Update the three lines according to the given AnalysisPlotResult.
-        Called by MainWindow after each analysis step.
-        """
+        """Update the lines according to the given AnalysisPlotResult."""
         x = result.x
 
         if self._show_current_var.get():
@@ -114,6 +112,15 @@ class PlotTab:
         if self._show_zero_var.get() and result.y_zero_phase is not None:
             self._line_zero.set_data(x, result.y_zero_phase)
 
+        self._ax.relim()
+        self._ax.autoscale_view()
+        self._canvas.draw_idle()
+
+    def clear(self) -> None:
+        """Clear all plotted data."""
+        self._line_current.set_data([], [])
+        self._line_fit.set_data([], [])
+        self._line_zero.set_data([], [])
         self._ax.relim()
         self._ax.autoscale_view()
         self._canvas.draw_idle()
