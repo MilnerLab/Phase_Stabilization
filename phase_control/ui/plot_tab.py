@@ -1,37 +1,31 @@
 # phase_control/ui/plot_tab.py
 from __future__ import annotations
 
-import threading
 import tkinter as tk
 from tkinter import ttk
-from typing import Callable, Optional
 
-from phase_control.analysis.config import AnalysisConfig
-from phase_control.analysis.run_analysis import run_analysis
-from phase_control.stream_io import FrameBuffer
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+
+from phase_control.analysis.run_analysis import AnalysisPlotResult
 
 
 class PlotTab:
     """
-    Tab 'Plotting':
+    Plotting tab with an embedded Matplotlib figure.
 
-    - Run-Button, der run_analysis in einem separaten Thread startet
-    - einfache Optionen, was im Plot gezeichnet werden soll
+    This tab does *not* know about the AnalysisEngine or the config.
+    It only exposes `update_plot(result)` to draw new data and hosts
+    local plot-options (visibility of the different curves).
     """
 
-    def __init__(
-        self,
-        parent: ttk.Notebook,
-        buffer: FrameBuffer,
-        config_provider: Callable[[], AnalysisConfig],
-    ) -> None:
+    def __init__(self, parent: ttk.Notebook) -> None:
         self.frame = ttk.Frame(parent)
-        self._buffer = buffer
-        self._config_provider = config_provider
 
-        # Analyse-Thread-Verwaltung
-        self._analysis_thread: Optional[threading.Thread] = None
-        self._analysis_stop_event: Optional[threading.Event] = None
+        # Tk state
+        self._show_current_var = tk.BooleanVar(value=True)
+        self._show_fit_var = tk.BooleanVar(value=True)
+        self._show_zero_var = tk.BooleanVar(value=True)
 
         self._build_ui()
 
@@ -41,57 +35,85 @@ class PlotTab:
 
     def _build_ui(self) -> None:
         pad = {"padx": 8, "pady": 4}
-
         frame = self.frame
         frame.columnconfigure(0, weight=1)
+        frame.rowconfigure(1, weight=1)
 
-        # Run-Button
-        run_button = ttk.Button(frame, text="Run analysis", command=self._on_run_clicked)
-        run_button.grid(row=0, column=0, sticky="ew", **pad)
+        # Options (checkboxes)
+        options_frame = ttk.LabelFrame(frame, text="Plot options")
+        options_frame.grid(row=0, column=0, sticky="ew", **pad)
+        options_frame.columnconfigure(0, weight=1)
 
+        ttk.Checkbutton(
+            options_frame,
+            text="Show current spectrum",
+            variable=self._show_current_var,
+            command=self._update_visibility,
+        ).grid(row=0, column=0, sticky="w", **pad)
+
+        ttk.Checkbutton(
+            options_frame,
+            text="Show fitted spectrum",
+            variable=self._show_fit_var,
+            command=self._update_visibility,
+        ).grid(row=1, column=0, sticky="w", **pad)
+
+        ttk.Checkbutton(
+            options_frame,
+            text="Show zero-phase fit",
+            variable=self._show_zero_var,
+            command=self._update_visibility,
+        ).grid(row=2, column=0, sticky="w", **pad)
+
+        # Matplotlib figure
+        plot_frame = ttk.Frame(frame)
+        plot_frame.grid(row=1, column=0, sticky="nsew")
+        plot_frame.columnconfigure(0, weight=1)
+        plot_frame.rowconfigure(0, weight=1)
+
+        self._figure = Figure(figsize=(6, 4), dpi=100)
+        self._ax = self._figure.add_subplot(111)
+
+        (self._line_current,) = self._ax.plot([], [], label="Current")
+        (self._line_fit,) = self._ax.plot([], [], label="Fit")
+        (self._line_zero,) = self._ax.plot([], [], label="Zero-phase")
+
+        self._ax.set_xlabel("Wavelength [nm]")
+        self._ax.set_ylabel("Counts")
+        self._ax.grid(True)
+        self._ax.legend()
+
+        self._canvas = FigureCanvasTkAgg(self._figure, master=plot_frame)
+        self._canvas_widget = self._canvas.get_tk_widget()
+        self._canvas_widget.grid(row=0, column=0, sticky="nsew")
+
+        self._update_visibility()
+        self._canvas.draw()
+
+    def _update_visibility(self) -> None:
+        self._line_current.set_visible(self._show_current_var.get())
+        self._line_fit.set_visible(self._show_fit_var.get())
+        self._line_zero.set_visible(self._show_zero_var.get())
+        self._canvas.draw_idle()
 
     # ------------------------------------------------------------------ #
-    # Analyse-Steuerung
+    # Public API
     # ------------------------------------------------------------------ #
 
-    def _on_run_clicked(self) -> None:
+    def update_plot(self, result: AnalysisPlotResult) -> None:
         """
-        Wird aufgerufen, wenn der Run-Button gedrückt wird.
-        - stoppt eine laufende Analyse (falls vorhanden)
-        - startet run_analysis mit der aktuellen Config neu
+        Update the three lines according to the given AnalysisPlotResult.
+        Called by MainWindow after each analysis step.
         """
-        self.stop_analysis()
+        x = result.x
 
-        config = self._config_provider()
+        if self._show_current_var.get():
+            self._line_current.set_data(x, result.y_current)
+        if self._show_fit_var.get() and result.y_fit is not None:
+            self._line_fit.set_data(x, result.y_fit)
+        if self._show_zero_var.get() and result.y_zero_phase is not None:
+            self._line_zero.set_data(x, result.y_zero_phase)
 
-        stop_event = threading.Event()
-        self._analysis_stop_event = stop_event
-
-        def worker() -> None:
-            run_analysis(
-                buffer=self._buffer,
-                stop_event=stop_event,
-                config=config
-            )
-
-        thread = threading.Thread(
-            target=worker,
-            name="AnalysisThread",
-            daemon=True,
-        )
-        self._analysis_thread = thread
-        thread.start()
-
-    def stop_analysis(self) -> None:
-        """
-        Stoppt eine eventuell laufende Analyse.
-        """
-        if self._analysis_stop_event is not None:
-            self._analysis_stop_event.set()
-
-        if self._analysis_thread is not None and self._analysis_thread.is_alive():
-            # kurz warten, aber nicht hart blockieren
-            self._analysis_thread.join(timeout=1.0)
-
-        self._analysis_thread = None
-        self._analysis_stop_event = None
+        self._ax.relim()
+        self._ax.autoscale_view()
+        self._canvas.draw_idle()

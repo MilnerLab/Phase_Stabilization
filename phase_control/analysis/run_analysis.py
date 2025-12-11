@@ -1,11 +1,10 @@
-# phase_control/analysis/plot.py
-from copy import copy, deepcopy
-import time
-import threading
-from turtle import clone, color
+# phase_control/analysis/run_analysis.py
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Optional
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from base_lib.functions import usCFG_projection
 from base_lib.models import Angle
@@ -14,94 +13,89 @@ from phase_control.analysis.phase_corrector import PhaseCorrector
 from phase_control.analysis.phase_tracker import PhaseTracker
 from phase_control.correction_io.elliptec_ell14 import ElliptecRotator
 from phase_control.domain.models import Spectrum
-from phase_control.domain.plotting import plot_model, plot_spectrogram
-from phase_control.stream_io import StreamMeta, FrameBuffer
+from phase_control.stream_io import FrameBuffer, StreamMeta
 
 
-def run_analysis(
-    buffer: FrameBuffer,
-    stop_event: threading.Event,
-    config: AnalysisConfig,
-) -> None:
-    
-    phase_tracker = PhaseTracker(config)
-    phase_corrector = PhaseCorrector()
-    ell = ElliptecRotator(max_address = "0") 
-    
-     # X-axis from wavelengths if available, otherwise pixel indices
-    if buffer.meta.wavelengths is not None:
-        x = np.array(buffer.meta.wavelengths, dtype=float)
-        x_label = "Wavelength [nm]"
-    else:
-        x = np.arange(buffer.meta.num_pixels, dtype=float)
-        x_label = "Pixel"
+@dataclass
+class AnalysisPlotResult:
+    """
+    Everything the UI needs after a single analysis step.
+    """
+    x: np.ndarray
+    y_current: np.ndarray
+    y_fit: Optional[np.ndarray]
+    y_zero_phase: Optional[np.ndarray]
+    current_phase: Optional[Angle]
+    correction_angle: Optional[Angle]
+    spectrum: Spectrum
 
-    spec0 = Spectrum.from_raw_data(x, np.ones_like(x)).cut(config.wavelength_range)
-    # Matplotlib setup
-    plt.ion()
-    fig, ax = plt.subplots()
 
-    (line,) = ax.plot(spec0.wavelengths_nm, spec0.intensity, ) #for current spectrum
-    (line2,) = ax.plot(spec0.wavelengths_nm, spec0.intensity) #for current fit
-    (line3,) = ax.plot(spec0.wavelengths_nm, spec0.intensity)
+class AnalysisEngine:
 
-    first = True
-    line.set_color('blue')
-    line2.set_color('green')
-    line3.set_color('red')
+    def __init__(
+        self,
+        config: AnalysisConfig,
+        buffer: FrameBuffer
+    ) -> None:
+        # Shared config instance used by UI and analysis
+        self.config = config
 
-    ax.set_xlabel(x_label)
-    ax.set_ylabel("Counts")
-    fig.tight_layout()
-    fig.canvas.draw()
-    fig.canvas.flush_events()
-    fig.gca().grid(axis = 'both')
+        # Data source
+        self._buffer = buffer
 
-    try:
-        while plt.fignum_exists(fig.number) and not stop_event.is_set():
-            current_spectrum = buffer.get_latest()
-            if current_spectrum is None:
-                time.sleep(0.01)
-                continue
+        # Helpers – they keep a reference to the same config instance
+        self._phase_tracker = PhaseTracker(self.config)
+        self._phase_corrector = PhaseCorrector()
+        self._rotator = ElliptecRotator(max_address="0")
 
-            current_spectrum = current_spectrum.cut(config.wavelength_range)
-            line.set_ydata(current_spectrum.intensity)
-            ax.relim()
-            ax.autoscale_view()
+    def reset(self) -> None:
+            """
+            Optional reset for a fresh run (e.g. after big config changes).
+            Recreates the PhaseTracker with the current shared config.
+            """
+            self._phase_tracker = PhaseTracker(self.config)
+        # ------------------------------------------------------------------ #
+        # Public API
+        # ------------------------------------------------------------------ #
 
-            fig.canvas.draw()
-            fig.canvas.flush_events()
-
-            phase_tracker.update(current_spectrum)
-
-            line3_config = copy(phase_tracker._config)
-            line3_config.phase = Angle(0)
-            
-            line3.set_ydata(usCFG_projection(current_spectrum.wavelengths_nm, **line3_config.to_fit_kwargs(usCFG_projection)))
-    
-            if phase_tracker.current_phase is None:
-                print("No phase detected.")
-                time.sleep(1)
-                continue
-            
-            correction_angle = phase_corrector.update(phase_tracker.current_phase)
-            
-            ell.rotate(correction_angle)
-            
-
-            
-            line2.set_ydata(usCFG_projection(current_spectrum.wavelengths_nm, **phase_tracker._config.to_fit_kwargs(usCFG_projection)))
-            
-            ax.relim()
-            ax.autoscale_view()
-
-            fig.canvas.draw()
-            fig.canvas.flush_events()
-            time.sleep(0.02)
-            
-
-    except KeyboardInterrupt:
-        print("\nLive plot interrupted by user.")
-    finally:
-        print("Live plot finished.")
+    def step(self) -> Optional[AnalysisPlotResult]:
+        spectrum = self._buffer.get_latest()
         
+        if spectrum is None:
+            return None
+
+        spectrum = spectrum.cut(self.config.wavelength_range)
+
+        # Phase tracking
+        self._phase_tracker.update(spectrum)
+        current_phase: Optional[Angle] = self._phase_tracker.current_phase
+
+        # Fit and zero-phase fit
+        try:
+            # PhaseTracker is expected to update self.config (same instance)
+            kwargs_fit = self.config.to_fit_kwargs(usCFG_projection)
+            y_fit = usCFG_projection(spectrum.wavelengths_nm, **kwargs_fit)
+
+            kwargs_zero = dict(kwargs_fit)
+            if "phase" in kwargs_zero:
+                kwargs_zero["phase"] = 0.0
+            y_zero = usCFG_projection(spectrum.wavelengths_nm, **kwargs_zero)
+        except Exception:
+            y_fit = None
+            y_zero = None
+
+        # Correction angle
+        correction_angle: Optional[Angle] = None
+        if current_phase is not None:
+            correction_angle = self._phase_corrector.update(current_phase)
+            self._rotator.rotate(correction_angle)
+
+        return AnalysisPlotResult(
+            x=spectrum.wavelengths_nm,
+            y_current=spectrum.intensity,
+            y_fit=y_fit,
+            y_zero_phase=y_zero,
+            current_phase=current_phase,
+            correction_angle=correction_angle,
+            spectrum=spectrum,
+        )

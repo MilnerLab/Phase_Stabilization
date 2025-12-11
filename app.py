@@ -1,15 +1,13 @@
-# phase_control/app.py
+# app.py (im Repo-Root, x64 side)
 import threading
-from typing import NoReturn
 
-from phase_control.analysis.run_analysis import run_analysis
+from phase_control.analysis.config import AnalysisConfig
+from phase_control.analysis.run_analysis import AnalysisEngine
 from phase_control.stream_io import (
     SpectrometerStreamClient,
     FrameBuffer,
-    StreamFrame,
     StreamMeta,
 )
-from phase_control.analysis.plot import run_plot
 from phase_control.ui.main_window import run_main_window
 
 
@@ -19,7 +17,7 @@ def reader_loop(
     stop_event: threading.Event,
 ) -> None:
     """
-    Background thread function.
+    Background thread:
 
     - consumes frames from the SpectrometerStreamClient
     - updates the FrameBuffer with the latest frame
@@ -31,23 +29,26 @@ def reader_loop(
                 break
             buffer.update(frame)
     finally:
-        # Make sure the process is stopped even if the loop ends
         client.stop()
 
 
 def main() -> None:
     """
-    Application entry point:
+    x64 side entry point:
 
-    - start stream client (32-bit acquisition process)
-    - create frame buffer
-    - start reader thread
-    - run plot in main thread
+    - start 32-bit acquisition subprocess via SpectrometerStreamClient
+    - create the shared AnalysisConfig instance
+    - create FrameBuffer + AnalysisEngine
+    - start a reader thread
+    - run the Tk main window (tabs) in the main thread
     """
     client = SpectrometerStreamClient()
     meta: StreamMeta = client.start()
 
     buffer = FrameBuffer(meta)
+    config = AnalysisConfig()
+    engine = AnalysisEngine(config=config, buffer=buffer)
+
     stop_event = threading.Event()
 
     reader = threading.Thread(
@@ -59,10 +60,8 @@ def main() -> None:
     reader.start()
 
     try:
-        # Run plotting in the main thread
-        run_main_window(buffer=buffer, stop_event=stop_event)
+        run_main_window(config=config, engine=engine, stop_event=stop_event)
     finally:
-        # Tell reader to stop and clean up
         stop_event.set()
         reader.join(timeout=2.0)
         client.stop()

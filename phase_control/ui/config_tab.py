@@ -1,6 +1,7 @@
 # phase_control/ui/config_tab.py
 from __future__ import annotations
 
+from dataclasses import fields
 import tkinter as tk
 from tkinter import ttk
 
@@ -9,50 +10,32 @@ from phase_control.analysis.config import AnalysisConfig
 
 
 class ConfigTab:
-    """
-    Tab für die Eingabe der Analysis-Parameter (AnalysisConfig).
 
-    Zeigt einfache Textfelder für die wichtigsten Parameter:
-    - carrier_wavelength [nm]
-    - starting_wavelength [nm]
-    - bandwidth [nm]
-    - baseline
-    - phase [rad]
-    - acceleration
-    - wavelength range [nm]
-    """
-
-    def __init__(self, parent: ttk.Notebook, initial: AnalysisConfig) -> None:
+    def __init__(self, parent: ttk.Notebook, config: AnalysisConfig) -> None:
         self.frame = ttk.Frame(parent)
 
-        # Tk-Variablen mit Defaults aus initialer Config
-        self._carrier_var = tk.StringVar(
-            value=f"{initial.carrier_wavelength.value(Prefix.NANO):.6f}"
-        )
-        self._starting_var = tk.StringVar(
-            value=f"{initial.starting_wavelength.value(Prefix.NANO):.6f}"
-        )
-        self._bandwidth_var = tk.StringVar(
-            value=f"{initial.bandwidth.value(Prefix.NANO):.6f}"
-        )
-        self._baseline_var = tk.StringVar(value=f"{initial.baseline:.6f}")
-        self._phase_var = tk.StringVar(value=f"{initial.phase.Rad:.6f}")
-        self._acceleration_var = tk.StringVar(value=f"{initial.acceleration:.6f}")
+        # Shared config instance
+        self._config = config
 
-        wl_min = initial.wavelength_range.min.value(Prefix.NANO)
-        wl_max = initial.wavelength_range.max.value(Prefix.NANO)
-        self._wl_min_var = tk.StringVar(value=f"{wl_min:.6f}")
-        self._wl_max_var = tk.StringVar(value=f"{wl_max:.6f}")
+        # Tk variables
+        self._carrier_var = tk.StringVar()
+        self._starting_var = tk.StringVar()
+        self._bandwidth_var = tk.StringVar()
+        self._baseline_var = tk.StringVar()
+        self._phase_var = tk.StringVar()
+        self._acceleration_var = tk.StringVar()
+        self._wl_min_var = tk.StringVar()
+        self._wl_max_var = tk.StringVar()
 
         self._build_ui()
+        self.refresh_from_config()
 
     # ------------------------------------------------------------------ #
-    # UI Aufbau
+    # UI
     # ------------------------------------------------------------------ #
 
     def _build_ui(self) -> None:
         pad = {"padx": 8, "pady": 4}
-
         frame = self.frame
         frame.columnconfigure(1, weight=1)
 
@@ -72,8 +55,10 @@ class ConfigTab:
         add_labeled_entry("Baseline:", self._baseline_var)
         add_labeled_entry("Phase [rad]:", self._phase_var)
         add_labeled_entry("Acceleration:", self._acceleration_var)
+
         ttk.Separator(frame).grid(row=row, column=0, columnspan=2, sticky="ew", **pad)
         row += 1
+
         add_labeled_entry("Wavelength min [nm]:", self._wl_min_var)
         add_labeled_entry("Wavelength max [nm]:", self._wl_max_var)
 
@@ -92,42 +77,61 @@ class ConfigTab:
     # Public API
     # ------------------------------------------------------------------ #
 
-    def build_config(self, base: AnalysisConfig | None = None) -> AnalysisConfig:
+    def refresh_from_config(self) -> None:
         """
-        Erzeugt eine neue AnalysisConfig aus den UI-Werten.
-        Wenn base gegeben ist, werden Felder bei Parse-Fehlern daraus übernommen.
+        Update UI fields from the shared config.
+        Call this whenever the config has been changed elsewhere.
         """
-        if base is None:
-            base = AnalysisConfig()
+        cfg = self._config
+
+        self._carrier_var.set(f"{cfg.carrier_wavelength.value(Prefix.NANO):.6f}")
+        self._starting_var.set(f"{cfg.starting_wavelength.value(Prefix.NANO):.6f}")
+        self._bandwidth_var.set(f"{cfg.bandwidth.value(Prefix.NANO):.6f}")
+        self._baseline_var.set(f"{cfg.baseline:.6f}")
+        self._phase_var.set(f"{cfg.phase.Rad:.6f}")
+        self._acceleration_var.set(f"{cfg.acceleration:.6f}")
+
+        wl_min_nm = cfg.wavelength_range.min.value(Prefix.NANO)
+        wl_max_nm = cfg.wavelength_range.max.value(Prefix.NANO)
+        self._wl_min_var.set(f"{wl_min_nm:.6f}")
+        self._wl_max_var.set(f"{wl_max_nm:.6f}")
+
+    def apply_to_config(self) -> None:
+        """
+        Parse the UI fields and write the values into the shared config
+        instance. This does not create a new AnalysisConfig; instead it
+        builds a temporary one and copies all fields over.
+        """
+        cfg = self._config
 
         carrier_nm = self._parse_float(
             self._carrier_var.get(),
-            base.carrier_wavelength.value(Prefix.NANO),
+            cfg.carrier_wavelength.value(Prefix.NANO),
         )
         starting_nm = self._parse_float(
             self._starting_var.get(),
-            base.starting_wavelength.value(Prefix.NANO),
+            cfg.starting_wavelength.value(Prefix.NANO),
         )
         bandwidth_nm = self._parse_float(
             self._bandwidth_var.get(),
-            base.bandwidth.value(Prefix.NANO),
+            cfg.bandwidth.value(Prefix.NANO),
         )
-        baseline = self._parse_float(self._baseline_var.get(), base.baseline)
-        phase_rad = self._parse_float(self._phase_var.get(), base.phase.Rad)
+        baseline = self._parse_float(self._baseline_var.get(), cfg.baseline)
+        phase_rad = self._parse_float(self._phase_var.get(), cfg.phase.Rad)
         acceleration = self._parse_float(
             self._acceleration_var.get(),
-            base.acceleration,
+            cfg.acceleration,
         )
         wl_min_nm = self._parse_float(
             self._wl_min_var.get(),
-            base.wavelength_range.min.value(Prefix.NANO),
+            cfg.wavelength_range.start.value(Prefix.NANO),
         )
         wl_max_nm = self._parse_float(
             self._wl_max_var.get(),
-            base.wavelength_range.max.value(Prefix.NANO),
+            cfg.wavelength_range.end.value(Prefix.NANO),
         )
 
-        return AnalysisConfig(
+        tmp = AnalysisConfig(
             carrier_wavelength=Length(carrier_nm, Prefix.NANO),
             starting_wavelength=Length(starting_nm, Prefix.NANO),
             bandwidth=Length(bandwidth_nm, Prefix.NANO),
@@ -139,3 +143,6 @@ class ConfigTab:
                 Length(wl_max_nm, Prefix.NANO),
             ),
         )
+
+        for f in fields(cfg):
+            setattr(cfg, f.name, getattr(tmp, f.name))
