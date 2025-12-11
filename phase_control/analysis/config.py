@@ -82,6 +82,10 @@ class FitParameter:
 
         mean_fit = cls(**kwargs)
         return mean_fit
+    
+    def copy_from(self, other: "FitParameter") -> None:
+        for f in fields(self):
+            setattr(self, f.name, getattr(other, f.name))
 
 
     _TO_FLOAT: ClassVar[dict[type[Any], Callable[[Any], float]]] = {

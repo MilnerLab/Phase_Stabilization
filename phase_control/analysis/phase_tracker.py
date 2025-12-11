@@ -12,11 +12,11 @@ MAX_LEN = int(10)
 
 class PhaseTracker():
     current_phase: Angle | None = None
-    _configs: deque[FitParameter] = deque(maxlen=MAX_LEN)
     
     def __init__(self, start_config: FitParameter) -> None:
         self._config: FitParameter = start_config
-    
+        self._configs: deque[FitParameter] = deque(maxlen=MAX_LEN)
+
     def update(self, spectrum: Spectrum) -> None:
         if len(self._configs) < MAX_LEN and self.current_phase is None:
             self._configs.append(self._initialize_fit_parameters(spectrum))
@@ -24,7 +24,7 @@ class PhaseTracker():
             return
         else:
             if self.current_phase is None:
-                self._config = FitParameter.mean(self._configs)
+                self._config.copy_from(FitParameter.mean(self._configs))
                 
             if len(self._configs) < MAX_LEN:
                 self._configs.append(self._fit_phase(spectrum))
