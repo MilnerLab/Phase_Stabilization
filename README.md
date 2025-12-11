@@ -1,6 +1,6 @@
 # Project Setup & Useful Commands
 
-This repository contains .  
+This repository contains.  
 Below is a quick reference for setting up the environments and running the programs.
 
 ---
@@ -56,20 +56,8 @@ This writes all installed extensions into `_extensions.txt`.
 
 ---
 
-## 3. Git Configuration
 
-Set your Git username and email (once per machine / repository):
-
-```powershell
-git config user.name "Git name"
-git config user.email "email"
-```
-
-Replace `"Git name"` and `"email"` with your actual name and email address.
-
----
-
-## 4. Running the Applications
+## 3. Running the Applications
 
 All applications are started via Python’s module syntax from the repository root.
 
@@ -78,11 +66,3 @@ All applications are started via Python’s module syntax from the repository ro
 python -m app
 ```
 
----
-
-## 5. Notes
-
-* Always run commands from the project root directory (where `setup_env.ps1` is located).
-* Make sure the virtual environment is active before running any of the Python modules above.
-
-```
