@@ -1,119 +1,144 @@
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
 
-# Always work relative to the location of this script
-$repoRoot = $PSScriptRoot
-Set-Location $repoRoot
+# Make paths independent from current working directory
+$root = $PSScriptRoot
+Set-Location $root
 
-# -------------------------------------------------------------------
-# Paths and files
-# -------------------------------------------------------------------
-# 32-bit acquisition venv (lives inside acquisition/)
-$acqVenvPath          = Join-Path $repoRoot "acquisition\.venv32"
-$acqRequirementsFile  = Join-Path $repoRoot "acquisition\_requirements_acquisition.txt"
-$acqPythonSpec        = "-3.13-32"   # 32-bit Python, adjust if needed
+# -----------------------------
+# Config
+# -----------------------------
+$venvPath          = Join-Path $root ".venv"
+$requirementsFile  = Join-Path $root "_requirements.txt"
+$extensionsFile    = Join-Path $root "_extensions.txt"
 
-# 64-bit phase_control / analysis venv (lives inside phase_control/)
-$phaseVenvPath        = Join-Path $repoRoot "phase_control\.venv64"
-$phaseRequirementsFile = Join-Path $repoRoot "phase_control\_requirements_phase_control.txt"  # main project reqs
-$phasePythonSpec      = "-3.13"     # 64-bit Python, adjust if needed (e.g. "-3.11")
+# Windows-only: which Python to use via the py launcher (if present)
+# If you need 32-bit on Windows, set to "-3.13-32" (or your exact installed version)
+$windowsPySpec = "-3.13"   # e.g. "-3.13" or "-3.13-32"
 
-# VS Code extensions file (same as before)
-$extensionsFile       = Join-Path $repoRoot "_extensions.txt"
-
-
-function Setup-Venv {
+# -----------------------------
+# Helpers
+# -----------------------------
+function Invoke-Native {
     param(
-        [Parameter(Mandatory = $true)]
-        [string] $VenvPath,
-
-        [Parameter(Mandatory = $true)]
-        [string] $PythonSpec,
-
-        [Parameter(Mandatory = $true)]
-        [string] $RequirementsFile
+        [Parameter(Mandatory = $true)][string] $Exe,
+        [Parameter(Mandatory = $false)][string[]] $Args = @()
     )
 
-    Write-Host "=== Creating/checking virtual environment '$VenvPath' ==="
-
-    if (-not (Test-Path $VenvPath)) {
-        Write-Host "Creating virtual environment with 'py $PythonSpec -m venv'..."
-        & py $PythonSpec -m venv $VenvPath
-    } else {
-        Write-Host "Virtual environment already exists, skipping creation."
-    }
-
-    # Activate
-    $activateScript = Join-Path $VenvPath "Scripts\Activate.ps1"
-    if (-not (Test-Path $activateScript)) {
-        throw "Activate script not found at '$activateScript'."
-    }
-
-    Write-Host "=== Activating virtual environment '$VenvPath' ==="
-    & $activateScript
-    Write-Host "Virtual env: $env:VIRTUAL_ENV"
-
-    # Upgrade pip
-    Write-Host "=== Upgrading pip in '$VenvPath' ==="
-    python -m pip install --upgrade pip
-
-    # Install requirements
-    if (Test-Path $RequirementsFile) {
-        Write-Host "=== Installing Python packages from '$RequirementsFile' ==="
-        python -m pip install -r $RequirementsFile
-    } else {
-        Write-Warning "Requirements file '$RequirementsFile' not found. Skipping package install."
+    & $Exe @Args
+    if ($LASTEXITCODE -ne 0) {
+        $argStr = ($Args -join " ")
+        throw "Command failed ($LASTEXITCODE): $Exe $argStr"
     }
 }
 
-# -------------------------------------------------------------------
-# 1) Setup acquisition (32-bit) environment
-# -------------------------------------------------------------------
-Write-Host "##############################"
-Write-Host " Setting up 32-bit acquisition"
-Write-Host "##############################"
+function Resolve-PythonRunner {
+    # Prefer Windows py launcher if available
+    if ($IsWindows -and (Get-Command py -ErrorAction SilentlyContinue)) {
+        return @{ Exe = "py"; Args = @($windowsPySpec) }
+    }
 
-Setup-Venv -VenvPath $acqVenvPath -PythonSpec $acqPythonSpec -RequirementsFile $acqRequirementsFile
+    foreach ($cmd in @("python3", "python")) {
+        if (Get-Command $cmd -ErrorAction SilentlyContinue) {
+            return @{ Exe = $cmd; Args = @() }
+        }
+    }
 
-# Expose PYTHON32_PATH for the analysis client (current session)
-$python32Exe = Join-Path $acqVenvPath "Scripts\python.exe"
-$python32Exe = (Resolve-Path $python32Exe).Path
-$env:PYTHON32_PATH = $python32Exe
-Write-Host "PYTHON32_PATH set to '$python32Exe'."
+    throw "No Python found. On Ubuntu install: sudo apt install python3 python3-venv python3-pip"
+}
 
-# -------------------------------------------------------------------
-# 2) Setup phase_control / analysis (64-bit) environment
-# -------------------------------------------------------------------
-Write-Host ""
-Write-Host "#########################################"
-Write-Host " Setting up 64-bit phase_control/analysis"
-Write-Host "#########################################"
+function Get-ActivateScriptPath([string] $Venv) {
+    if ($IsWindows) { return (Join-Path $Venv "Scripts/Activate.ps1") }
+    return (Join-Path $Venv "bin/Activate.ps1")
+}
 
-Setup-Venv -VenvPath $phaseVenvPath -PythonSpec $phasePythonSpec -RequirementsFile $phaseRequirementsFile
+function Get-VenvPythonPath([string] $Venv) {
+    if ($IsWindows) { return (Join-Path $Venv "Scripts/python.exe") }
+    return (Join-Path $Venv "bin/python")
+}
 
-# At this point, the *last* activated venv is the 64-bit one.
+function Ensure-Pip([string] $PythonExe) {
+    # Check if pip exists
+    & $PythonExe -m pip --version *> $null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "pip not found in venv -> bootstrapping with ensurepip..."
+        Invoke-Native $PythonExe @("-m", "ensurepip", "--upgrade")
+    }
 
-# -------------------------------------------------------------------
-# 3) Install VS Code extensions (once, independent of venv)
-# -------------------------------------------------------------------
-Write-Host ""
-Write-Host "=== Installing VS Code extensions (if any) ==="
+    Write-Host "Upgrading pip/setuptools/wheel..."
+    Invoke-Native $PythonExe @("-m", "pip", "install", "-U", "pip", "setuptools", "wheel")
+}
 
+function Resolve-CodeCli {
+    foreach ($cmd in @("code", "code-insiders", "codium", "code-oss")) {
+        if (Get-Command $cmd -ErrorAction SilentlyContinue) { return $cmd }
+    }
+    return $null
+}
+
+# -----------------------------
+# Create venv
+# -----------------------------
+Write-Host "=== Creating/checking virtual environment '$venvPath' ==="
+$py = Resolve-PythonRunner
+
+if (-not (Test-Path $venvPath)) {
+    Write-Host "Creating venv using: $($py.Exe) $($py.Args -join ' ')"
+    Invoke-Native $py.Exe @($py.Args + @("-m", "venv", $venvPath))
+} else {
+    Write-Host "Venv already exists, skipping creation."
+}
+
+$venvPython = Get-VenvPythonPath $venvPath
+if (-not (Test-Path $venvPython)) {
+    throw "Venv python not found at '$venvPython'."
+}
+
+# -----------------------------
+# Ensure pip + install requirements
+# -----------------------------
+Write-Host "=== Ensuring pip exists ==="
+Ensure-Pip $venvPython
+
+if (Test-Path $requirementsFile) {
+    Write-Host "=== Installing Python packages from '$requirementsFile' ==="
+    Invoke-Native $venvPython @("-m", "pip", "install", "-r", $requirementsFile)
+} else {
+    Write-Warning "Requirements file '$requirementsFile' not found. Skipping."
+}
+
+# -----------------------------
+# Install VS Code extensions (optional)
+# -----------------------------
+Write-Host "=== Installing VS Code extensions (optional) ==="
 if (Test-Path $extensionsFile) {
-    if (-not (Get-Command code -ErrorAction SilentlyContinue)) {
-        Write-Warning "'code' CLI (VS Code) not found in PATH. Skipping extension install."
+    $codeCmd = Resolve-CodeCli
+    if (-not $codeCmd) {
+        Write-Warning "VS Code CLI not found (code/codium). Skipping extension install."
     } else {
         Get-Content $extensionsFile | ForEach-Object {
             $ext = $_.Trim()
             if ($ext -and -not $ext.StartsWith("#")) {
                 Write-Host "Installing VS Code extension '$ext'..."
-                code --install-extension $ext
+                Invoke-Native $codeCmd @("--install-extension", $ext)
             }
         }
     }
 } else {
-    Write-Warning "Extensions file '$extensionsFile' not found. Skipping VS Code extension install."
+    Write-Host "No _extensions.txt found. Skipping extension install."
 }
 
-Write-Host ""
-Write-Host "=== Setup finished. 64-bit venv '$phaseVenvPath' is active in this PowerShell session. ==="
-Write-Host "You can now run 'python -m analysis.plot' to start the live spectrum plot."
+# -----------------------------
+# Activate (only affects the current PowerShell session)
+# -----------------------------
+$activateScript = Get-ActivateScriptPath $venvPath
+if (Test-Path $activateScript) {
+    Write-Host "=== Activating venv in this PowerShell session ==="
+    . $activateScript
+    Write-Host "Active venv: $env:VIRTUAL_ENV"
+} else {
+    Write-Warning "Activate script not found at '$activateScript'. (venv still created and dependencies installed)"
+}
+
+Write-Host "=== Done. ==="
+Write-Host "Tip: Use '$venvPython -m pip ...' to always target the venv explicitly."
