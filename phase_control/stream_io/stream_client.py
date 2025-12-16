@@ -18,9 +18,8 @@ import os
 import subprocess
 from pathlib import Path
 from typing import Iterator, Optional
-
-from acquisition.config import PYTHON32_PATH
 from .models import StreamMeta, StreamFrame
+from spm_002.config import PYTHON32_PATH
 
 
 class SpectrometerStreamClient:

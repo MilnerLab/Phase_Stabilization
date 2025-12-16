@@ -8,10 +8,10 @@ import numpy as np
 
 from base_lib.functions import usCFG_projection
 from base_lib.models import Angle
+from elliptec.elliptec_ell14 import ElliptecRotator
 from phase_control.analysis.config import AnalysisConfig, FitParameter
 from phase_control.analysis.phase_corrector import PhaseCorrector
 from phase_control.analysis.phase_tracker import PhaseTracker
-from phase_control.correction_io.elliptec_ell14 import ElliptecRotator
 from phase_control.domain.models import Spectrum
 from phase_control.stream_io import FrameBuffer, StreamMeta
 

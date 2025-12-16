@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "../Base_Lib"
+		},
+		{
+			"path": "../Devices"
 		}
 	],
 	"settings": {}

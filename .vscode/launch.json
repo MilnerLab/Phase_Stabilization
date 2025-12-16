@@ -3,11 +3,10 @@
   "configurations": [
     
     
-    
 
     {
       "name": "Debug script",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "module": "phase_control.Demo.script",
       "console": "integratedTerminal",
@@ -15,7 +14,7 @@
     },
     {
       "name": "Debug app",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "module": "app",
       "console": "integratedTerminal",
