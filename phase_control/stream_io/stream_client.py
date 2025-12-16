@@ -77,7 +77,7 @@ class SpectrometerStreamClient:
         repo_root = Path(__file__).resolve().parents[2]  # .../SPM-002
 
         proc = subprocess.Popen(
-            [self.python32_path, "-m", "acquisition.json_stream_server"],
+            [self.python32_path, "-m", "spm_002.json_stream_server"],
             cwd=str(repo_root),          # acquisition package visible for -m
             stdout=subprocess.PIPE,
             stdin=subprocess.DEVNULL,
