@@ -37,26 +37,14 @@ class AnalysisEngine:
         config: AnalysisConfig,
         buffer: FrameBuffer
     ) -> None:
-        # Shared config instance used by UI and analysis
         self.config = config
-
-        # Data source
         self._buffer = buffer
-
-        # Helpers – they keep a reference to the same config instance
         self._phase_tracker = PhaseTracker(cast(FitParameter, self.config))
         self._phase_corrector = PhaseCorrector()
         self._rotator = ElliptecRotator(max_address="0")
 
     def reset(self) -> None:
-            """
-            Optional reset for a fresh run (e.g. after big config changes).
-            Recreates the PhaseTracker with the current shared config.
-            """
             self._phase_tracker = PhaseTracker(self.config)
-        # ------------------------------------------------------------------ #
-        # Public API
-        # ------------------------------------------------------------------ #
 
     def step(self) -> Optional[AnalysisPlotResult]:
         spectrum = self._buffer.get_latest()
@@ -66,13 +54,10 @@ class AnalysisEngine:
 
         spectrum = spectrum.cut(self.config.wavelength_range)
 
-        # Phase tracking
         self._phase_tracker.update(spectrum)
         current_phase: Optional[Angle] = self._phase_tracker.current_phase
 
-        # Fit and zero-phase fit
         try:
-            # PhaseTracker is expected to update self.config (same instance)
             kwargs_fit = self.config.to_fit_kwargs(usCFG_projection)
             y_fit = usCFG_projection(spectrum.wavelengths_nm, **kwargs_fit)
 
@@ -84,7 +69,6 @@ class AnalysisEngine:
             y_fit = None
             y_zero = None
 
-        # Correction angle
         correction_angle: Optional[Angle] = None
         if current_phase is not None:
             correction_angle = self._phase_corrector.update(current_phase)

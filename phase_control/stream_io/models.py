@@ -20,6 +20,6 @@ class StreamFrame:
     One spectrum frame from the acquisition process.
     Corresponds to a 'frame' JSON object.
     """
-    timestamp: str          # ISO-8601 string
+    timestamp: str          
     device_index: int
     counts: List[int]

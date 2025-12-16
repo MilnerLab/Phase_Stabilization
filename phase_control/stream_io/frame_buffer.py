@@ -11,27 +11,16 @@ from .models import StreamFrame, StreamMeta
 
 
 class FrameBuffer:
-    """
-    Thread-safe buffer that always stores only the latest frame.
-
-    - update(frame): store a new frame (overwrites previous one)
-    - get_latest(): return the most recent frame or None if nothing yet
-    """
-
     def __init__(self, meta: StreamMeta) -> None:
         self._lock = threading.Lock()
         self._latest: Optional[StreamFrame] = None
         self.meta: StreamMeta = meta
 
     def update(self, frame: StreamFrame) -> None:
-        """Store a new frame, overwriting any previous frame."""
         with self._lock:
             self._latest = frame
 
     def get_latest(self) -> Spectrum | None:
-        """
-        Return the most recent frame, or None if no frame has been stored yet.
-        """
         if self._latest is None:
             return None
         with self._lock:

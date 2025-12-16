@@ -27,18 +27,8 @@ class SpectrometerStreamClient:
     Stream client for the JSON output of the 32-bit acquisition process.
     """
 
-    def __init__(self, python32_path: Optional[str] = None) -> None:
-        """
-        Parameters
-        ----------
-        python32_path:
-            Path to the 32-bit Python interpreter.
-
-            Resolution priority:
-            1. explicit python32_path argument
-            2. environment variable 'PYTHON32_PATH'
-            3. acquisition.config.PYTHON32_PATH
-        """
+    def __init__(self) -> None:
+        
         self.python32_path = PYTHON32_PATH
 
         self._proc: Optional[subprocess.Popen[str]] = None
@@ -144,9 +134,6 @@ class SpectrometerStreamClient:
             )
 
     def stop(self) -> None:
-        """
-        Terminate the acquisition process if it is still running.
-        """
         proc = self._proc
         self._proc = None
 
